@@ -17,3 +17,6 @@ captures/
 *.jks
 *.keystore
 keystore.properties
+
+# Built APKs (attach to GitHub Releases instead of committing)
+*.apk
