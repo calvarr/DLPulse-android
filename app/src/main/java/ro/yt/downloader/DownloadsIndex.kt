@@ -2,6 +2,7 @@ package ro.yt.downloader
 
 import android.content.ContentUris
 import android.content.Context
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -472,5 +473,35 @@ object DownloadsIndex {
             if (normalized == cn) return true
         }
         return false
+    }
+
+    /**
+     * Creează un subfolder în **Download/DLPulse** sub [parentRelativePath] (gol = rădăcină DLPulse).
+     */
+    fun createDlpulseSubfolder(context: Context, parentRelativePath: String, rawName: String): Boolean {
+        val folderName = sanitizeNewFolderName(rawName) ?: return false
+        val rel = normalizeRelativePathInsidePublic(parentRelativePath)
+        val baseDir = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            SUBFOLDER
+        )
+        val parentDir = safeResolvedDirectory(baseDir, rel) ?: return false
+        if (!parentDir.isDirectory) return false
+        val newDir = File(parentDir, folderName)
+        if (newDir.exists()) return false
+        if (!newDir.mkdir()) return false
+        MediaScannerConnection.scanFile(
+            context,
+            arrayOf(newDir.absolutePath),
+            null,
+            null
+        )
+        return true
+    }
+
+    private fun sanitizeNewFolderName(raw: String): String? {
+        val t = raw.trim().replace(Regex("""[\\/:*?"<>|]"""), "_")
+        if (t.isEmpty() || t == "." || t == "..") return null
+        return if (t.length > 80) t.take(80) else t
     }
 }

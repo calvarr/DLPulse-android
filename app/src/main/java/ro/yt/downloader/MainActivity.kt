@@ -656,9 +656,6 @@ class MainActivity : AppCompatActivity() {
                             btnDownload.visibility = View.GONE
                             val adapter = SearchResultsAdapter(list)
                             adapter.onPlayInApp = { item -> startPlayInAppFromSearchItem(item) }
-                            adapter.onOpenUrl = { url ->
-                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                            }
                             adapter.onSelectionChanged = {
                                 updateBatchButton(adapter, btnDownloadPlaylistSelected)
                             }
@@ -720,9 +717,6 @@ class MainActivity : AppCompatActivity() {
                 btnDownload.visibility = View.GONE
                 val adapter = SearchResultsAdapter(list)
                 adapter.onPlayInApp = { item -> startPlayInAppFromSearchItem(item) }
-                adapter.onOpenUrl = { url ->
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                }
                 adapter.onSelectionChanged = { updateBatchButton(adapter, btnDownloadBatch) }
                 searchRecycler.adapter = adapter
                 searchAdapter = adapter

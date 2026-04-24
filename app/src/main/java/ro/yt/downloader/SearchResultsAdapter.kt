@@ -16,8 +16,7 @@ class SearchResultsAdapter(
 
     private val selected = LinkedHashSet<Int>()
 
-    var onOpenUrl: ((String) -> Unit)? = null
-    /** Redare în ExoPlayer (URL de stream extras cu yt-dlp), nu în browser. */
+    /** Redare stream în ExoPlayer (URL extras cu yt-dlp). */
     var onPlayInApp: ((SearchResultItem) -> Unit)? = null
     var onSelectionChanged: (() -> Unit)? = null
 
@@ -57,7 +56,6 @@ class SearchResultsAdapter(
             holder.thumb.setImageDrawable(null)
         }
         holder.btnPlay.setOnClickListener { onPlayInApp?.invoke(item) }
-        holder.btnOpen.setOnClickListener { onOpenUrl?.invoke(item.url) }
     }
 
     class VH(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -65,6 +63,5 @@ class SearchResultsAdapter(
         val thumb: ImageView = itemView.findViewById(R.id.thumbnail)
         val title: TextView = itemView.findViewById(R.id.title)
         val btnPlay: Button = itemView.findViewById(R.id.btnPlay)
-        val btnOpen: Button = itemView.findViewById(R.id.btnOpen)
     }
 }

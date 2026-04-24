@@ -190,6 +190,16 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
 
     <string name="menu_open_dlpulse_in_files">Open Download/DLPulse in Files</string>
     <string name="menu_browse_device_storage">Browse device storage…</string>
+    <string name="menu_new_folder">New folder</string>
+    <string name="menu_browse_pick_library">Pick folder in app (Music, Video…)</string>
+    <string name="menu_browse_saved_library">Last picked folder</string>
+    <string name="menu_browse_dlpulse_downloads">Back to Download/DLPulse</string>
+    <string name="browse_subtitle_saf_root">Picked folder (Music, Video…)</string>
+    <string name="browse_saf_attached">You can browse and play files from this folder.</string>
+    <string name="browse_new_folder_title">New folder name</string>
+    <string name="browse_new_folder_hint">e.g. favorites, workout</string>
+    <string name="browse_new_folder_done">Folder created.</string>
+    <string name="browse_new_folder_failed">Could not create folder (invalid name or already exists).</string>
     <string name="browse_disconnect_cast">Stop casting</string>
     <string name="browse_toolbar_path">Download/DLPulse</string>
     <string name="browse_filter_label">Filter by name</string>
@@ -214,7 +224,6 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="cd_browse_playlist_play">Play playlist</string>
     <string name="cd_browse_selection_share">Share selection</string>
     <string name="cd_browse_playlist_cast">Cast playlist</string>
-    <string name="search_open_browser">Open</string>
     <string name="search_play_in_app">Play</string>
     <string name="search_play_preparing">Preparing playback…</string>
     <string name="search_play_failed">Could not start playback.</string>

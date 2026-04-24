@@ -17,10 +17,19 @@ object DownloadFileActions {
     fun openPlayerPlaylist(activity: Activity, entries: List<DownloadedFileEntry>) {
         if (entries.isEmpty()) return
         try {
-            val uris = entries.map { it.playUri(activity).toString() }.toTypedArray()
+            val uris = entries.map { it.playUri(activity) }
+            val uriStrings = uris.map { it.toString() }.toTypedArray()
             activity.startActivity(
                 Intent(activity, PlayerActivity::class.java).apply {
-                    putExtra(PlayerActivity.EXTRA_URI_LIST, uris)
+                    putExtra(PlayerActivity.EXTRA_URI_LIST, uriStrings)
+                    if (uris.any { "content".equals(it.scheme, ignoreCase = true) }) {
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        val clip = ClipData.newUri(activity.contentResolver, "media", uris[0])
+                        for (i in 1 until uris.size) {
+                            clip.addItem(ClipData.Item(uris[i]))
+                        }
+                        clipData = clip
+                    }
                 }
             )
         } catch (e: Exception) {

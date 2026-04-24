@@ -6,9 +6,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
@@ -25,6 +27,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import android.provider.DocumentsContract
 import java.io.File
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -55,6 +58,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
         data class FileRow(val entry: DownloadedFileEntry) : BrowseRow()
     }
 
+    private enum class BrowseLocation { DLPULSE, SAF_LIBRARY }
+
     private lateinit var toolbar: Toolbar
     private lateinit var inputFilter: EditText
     private lateinit var cbBrowseSelectAllFiles: CheckBox
@@ -81,6 +86,10 @@ class PublicDownloadsActivity : AppCompatActivity() {
     private var browseRelativePath: String = ""
     /** Dacă e true, lista plată ca înainte (toate fișierele din toate subfolderele). */
     private var flatViewAllFiles: Boolean = false
+    private lateinit var browsePrefs: BrowseStoragePrefs
+    private var browseLocation = BrowseLocation.DLPULSE
+    private var safTreeUri: Uri? = null
+    private val safPathSegments = mutableListOf<String>()
     private val selectedKeys = linkedSetOf<String>()
     private var syncingSelectAllCheck = false
 
@@ -135,6 +144,21 @@ class PublicDownloadsActivity : AppCompatActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) {
         reloadFromDisk()
+    }
+
+    private val pickSafTreeLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode != RESULT_OK) return@registerForActivityResult
+        val uri = result.data?.data ?: return@registerForActivityResult
+        runCatching {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        }
+        browsePrefs.setSafTreeUri(uri)
+        enterSafMode(uri)
     }
 
     private val castSessionListener = object : SessionManagerListener<CastSession> {
@@ -250,6 +274,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        browsePrefs = BrowseStoragePrefs(this)
         setContentView(R.layout.activity_public_downloads)
         toolbar = findViewById(R.id.toolbarPublicDownloads)
         inputFilter = findViewById(R.id.inputPublicFilter)
@@ -266,21 +291,13 @@ class PublicDownloadsActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
         toolbar.setNavigationOnClickListener {
-            if (!flatViewAllFiles && browseRelativePath.isNotEmpty()) {
-                navigateBrowseUp()
-            } else {
-                finish()
-            }
+            if (!handleBrowseNavigateUp()) finish()
         }
         onBackPressedDispatcher.addCallback(
             this,
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
-                    if (!flatViewAllFiles && browseRelativePath.isNotEmpty()) {
-                        navigateBrowseUp()
-                    } else {
-                        finish()
-                    }
+                    if (!handleBrowseNavigateUp()) finish()
                 }
             }
         )
@@ -377,11 +394,20 @@ class PublicDownloadsActivity : AppCompatActivity() {
             if (flatViewAllFiles) R.string.menu_browse_show_folders
             else R.string.menu_browse_show_flat
         )
+        menu.findItem(R.id.action_new_folder)?.isVisible =
+            (browseLocation == BrowseLocation.DLPULSE && !flatViewAllFiles) ||
+                browseLocation == BrowseLocation.SAF_LIBRARY
+        menu.findItem(R.id.action_browse_flat_toggle)?.isVisible = browseLocation == BrowseLocation.DLPULSE
+        menu.findItem(R.id.action_browse_saved_library)?.isVisible =
+            browseLocation == BrowseLocation.DLPULSE && browsePrefs.getSafTreeUri() != null
+        menu.findItem(R.id.action_browse_pick_library)?.isVisible = browseLocation == BrowseLocation.DLPULSE
+        menu.findItem(R.id.action_browse_dlpulse_downloads)?.isVisible = browseLocation == BrowseLocation.SAF_LIBRARY
         return super.onPrepareOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == R.id.action_browse_flat_toggle) {
+            if (browseLocation != BrowseLocation.DLPULSE) return true
             flatViewAllFiles = !flatViewAllFiles
             if (!flatViewAllFiles) browseRelativePath = ""
             selectedKeys.clear()
@@ -399,6 +425,22 @@ class PublicDownloadsActivity : AppCompatActivity() {
         }
         if (item.itemId == R.id.action_browse_device_storage) {
             DownloadsFolderOpener.openPrimaryStorageBrowser(this)
+            return true
+        }
+        if (item.itemId == R.id.action_new_folder) {
+            showNewFolderDialog()
+            return true
+        }
+        if (item.itemId == R.id.action_browse_pick_library) {
+            launchPickSafTree()
+            return true
+        }
+        if (item.itemId == R.id.action_browse_saved_library) {
+            openSavedSafLibrary()
+            return true
+        }
+        if (item.itemId == R.id.action_browse_dlpulse_downloads) {
+            exitSafToDlpulse()
             return true
         }
         return super.onOptionsItemSelected(item)
@@ -441,7 +483,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
         if (castContext?.sessionManager?.currentCastSession?.remoteMediaClient != null) {
             ensureCastCallbackRegistered()
         }
-        if (hasStorageReadPermission()) {
+        if (hasStorageReadPermission() || browseLocation == BrowseLocation.SAF_LIBRARY) {
             reloadFromDisk()
         }
         invalidateOptionsMenu()
@@ -714,25 +756,58 @@ class PublicDownloadsActivity : AppCompatActivity() {
 
     private fun reloadFromDisk(clearSelection: Boolean = true) {
         Thread {
-            if (flatViewAllFiles) {
-                val list = DownloadsIndex.listPublicDlpulseOnly(this)
-                runOnUiThread {
-                    subfoldersInDir = emptyList()
-                    allEntries = list
-                    if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
-                    updateToolbarBrowseSubtitle()
-                    applyFilter()
-                    updateSelectionUi()
+            when (browseLocation) {
+                BrowseLocation.SAF_LIBRARY -> {
+                    var tree = safTreeUri ?: browsePrefs.getSafTreeUri()?.also { safTreeUri = it }
+                    if (tree == null) {
+                        runOnUiThread {
+                            browseLocation = BrowseLocation.DLPULSE
+                            if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
+                            updateToolbarBrowseSubtitle()
+                            reloadFromDisk(clearSelection)
+                        }
+                        return@Thread
+                    }
+                    safTreeUri = tree
+                    val listing = SafDirectoryListing.list(
+                        this@PublicDownloadsActivity,
+                        tree,
+                        safPathSegments.toList()
+                    )
+                    runOnUiThread {
+                        subfoldersInDir = listing.subfolders
+                        allEntries = listing.files
+                        if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
+                        updateToolbarBrowseSubtitle()
+                        applyFilter()
+                        updateSelectionUi()
+                    }
                 }
-            } else {
-                val listing = DownloadsIndex.listPublicDlpulseDirectory(this, browseRelativePath)
-                runOnUiThread {
-                    subfoldersInDir = listing.subfolders
-                    allEntries = listing.files
-                    if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
-                    updateToolbarBrowseSubtitle()
-                    applyFilter()
-                    updateSelectionUi()
+                BrowseLocation.DLPULSE -> {
+                    if (flatViewAllFiles) {
+                        val list = DownloadsIndex.listPublicDlpulseOnly(this@PublicDownloadsActivity)
+                        runOnUiThread {
+                            subfoldersInDir = emptyList()
+                            allEntries = list
+                            if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
+                            updateToolbarBrowseSubtitle()
+                            applyFilter()
+                            updateSelectionUi()
+                        }
+                    } else {
+                        val listing = DownloadsIndex.listPublicDlpulseDirectory(
+                            this@PublicDownloadsActivity,
+                            browseRelativePath
+                        )
+                        runOnUiThread {
+                            subfoldersInDir = listing.subfolders
+                            allEntries = listing.files
+                            if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
+                            updateToolbarBrowseSubtitle()
+                            applyFilter()
+                            updateSelectionUi()
+                        }
+                    }
                 }
             }
         }.start()
@@ -743,24 +818,154 @@ class PublicDownloadsActivity : AppCompatActivity() {
         selectedKeys.retainAll(valid)
     }
 
-    private fun navigateBrowseUp() {
-        val parts = browseRelativePath.split('/').filter { it.isNotEmpty() }
-        browseRelativePath = if (parts.size <= 1) "" else parts.dropLast(1).joinToString("/")
+    /**
+     * @return true dacă s-a consumat evenimentul (nu închide activitatea).
+     */
+    private fun handleBrowseNavigateUp(): Boolean {
+        return when (browseLocation) {
+            BrowseLocation.SAF_LIBRARY -> {
+                if (safPathSegments.isNotEmpty()) {
+                    safPathSegments.removeAt(safPathSegments.lastIndex)
+                    selectedKeys.clear()
+                    reloadFromDisk()
+                    true
+                } else {
+                    exitSafToDlpulse()
+                    true
+                }
+            }
+            BrowseLocation.DLPULSE -> {
+                if (!flatViewAllFiles && browseRelativePath.isNotEmpty()) {
+                    val parts = browseRelativePath.split('/').filter { it.isNotEmpty() }
+                    browseRelativePath = if (parts.size <= 1) "" else parts.dropLast(1).joinToString("/")
+                    selectedKeys.clear()
+                    reloadFromDisk()
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+    }
+
+    private fun enterSafMode(treeUri: Uri) {
+        safTreeUri = treeUri
+        safPathSegments.clear()
+        browseLocation = BrowseLocation.SAF_LIBRARY
+        flatViewAllFiles = false
+        browseRelativePath = ""
         selectedKeys.clear()
         reloadFromDisk()
+        invalidateOptionsMenu()
+        Toast.makeText(this, R.string.browse_saf_attached, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun exitSafToDlpulse() {
+        browseLocation = BrowseLocation.DLPULSE
+        safTreeUri = null
+        safPathSegments.clear()
+        selectedKeys.clear()
+        reloadFromDisk()
+        invalidateOptionsMenu()
+    }
+
+    private fun openSavedSafLibrary() {
+        val u = browsePrefs.getSafTreeUri() ?: return
+        enterSafMode(u)
+    }
+
+    private fun launchPickSafTree() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                putExtra(
+                    DocumentsContract.EXTRA_INITIAL_URI,
+                    DocumentsContract.buildDocumentUri(
+                        "com.android.externalstorage.documents",
+                        "primary:${Environment.DIRECTORY_MUSIC}"
+                    )
+                )
+            }
+        }
+        pickSafTreeLauncher.launch(intent)
+    }
+
+    private fun showNewFolderDialog() {
+        val density = resources.displayMetrics.density
+        val pad = (20 * density).toInt()
+        val input = EditText(this).apply {
+            hint = getString(R.string.browse_new_folder_hint)
+        }
+        val container = FrameLayout(this).apply {
+            addView(
+                input,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(pad, pad / 2, pad, pad) }
+            )
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.browse_new_folder_title)
+            .setView(container)
+            .setPositiveButton(R.string.browse_ok) { _, _ ->
+                val name = input.text.toString()
+                val ok = when (browseLocation) {
+                    BrowseLocation.DLPULSE -> {
+                        if (flatViewAllFiles) {
+                            false
+                        } else {
+                            DownloadsIndex.createDlpulseSubfolder(this, browseRelativePath, name)
+                        }
+                    }
+                    BrowseLocation.SAF_LIBRARY -> {
+                        val t = safTreeUri ?: browsePrefs.getSafTreeUri()
+                        if (t == null) false
+                        else SafDirectoryListing.createSubfolder(this, t, safPathSegments, name)
+                    }
+                }
+                if (ok) {
+                    reloadFromDisk(clearSelection = false)
+                    Toast.makeText(this, R.string.browse_new_folder_done, Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, R.string.browse_new_folder_failed, Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton(R.string.main_cancel, null)
+            .show()
     }
 
     private fun navigateIntoFolder(name: String) {
-        browseRelativePath = if (browseRelativePath.isEmpty()) name else "$browseRelativePath/$name"
+        when (browseLocation) {
+            BrowseLocation.DLPULSE -> {
+                browseRelativePath = if (browseRelativePath.isEmpty()) name else "$browseRelativePath/$name"
+            }
+            BrowseLocation.SAF_LIBRARY -> {
+                safPathSegments.add(name)
+            }
+        }
         selectedKeys.clear()
         reloadFromDisk()
     }
 
     private fun updateToolbarBrowseSubtitle() {
-        supportActionBar?.subtitle = when {
-            flatViewAllFiles -> getString(R.string.browse_subtitle_flat)
-            browseRelativePath.isEmpty() -> getString(R.string.browse_subtitle_root)
-            else -> browseRelativePath.replace("/", " › ")
+        supportActionBar?.subtitle = when (browseLocation) {
+            BrowseLocation.SAF_LIBRARY -> {
+                if (safPathSegments.isEmpty()) {
+                    getString(R.string.browse_subtitle_saf_root)
+                } else {
+                    safPathSegments.joinToString(" › ")
+                }
+            }
+            BrowseLocation.DLPULSE -> when {
+                flatViewAllFiles -> getString(R.string.browse_subtitle_flat)
+                browseRelativePath.isEmpty() -> getString(R.string.browse_subtitle_root)
+                else -> browseRelativePath.replace("/", " › ")
+            }
         }
     }
 
@@ -805,7 +1010,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
 
         val totalShown = displayedBrowseRows.size
         when {
-            !hasStorageReadPermission() -> {
+            browseLocation == BrowseLocation.DLPULSE && !hasStorageReadPermission() -> {
                 emptyView.visibility = View.VISIBLE
                 emptyView.text = getString(R.string.browse_empty_permission)
             }
@@ -834,6 +1039,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
         if (castContext == null) {
             popup.menu.findItem(R.id.action_cast_file)?.isVisible = false
         }
+        popup.menu.findItem(R.id.action_rename_file)?.isVisible =
+            browseLocation != BrowseLocation.SAF_LIBRARY
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_play_file -> {

@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.documentfile.provider.DocumentFile
 import java.io.File
 import java.util.Locale
 
@@ -42,6 +43,11 @@ object DownloadFileModify {
                 runCatching { entry.file?.delete() }
                 return true
             }
+            if (deleteViaDocumentFile(context, uri)) {
+                entry.file?.parentFile?.absolutePath?.let { scanPath(context, it) }
+                runCatching { entry.file?.delete() }
+                return true
+            }
         }
         entry.file?.let { f ->
             if (!f.exists()) return false
@@ -60,6 +66,12 @@ object DownloadFileModify {
         }
         return false
     }
+
+    private fun deleteViaDocumentFile(context: Context, uri: Uri): Boolean =
+        runCatching {
+            val d = DocumentFile.fromSingleUri(context, uri)
+            d != null && d.exists() && !d.isDirectory && d.delete()
+        }.getOrDefault(false)
 
     private fun deleteMediaRow(context: Context, uri: Uri): Boolean {
         return try {

@@ -2,8 +2,24 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/action_new_folder"
+        android:title="@string/menu_new_folder"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_browse_flat_toggle"
         android:title="@string/menu_browse_show_flat"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_browse_saved_library"
+        android:title="@string/menu_browse_saved_library"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_browse_pick_library"
+        android:title="@string/menu_browse_pick_library"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_browse_dlpulse_downloads"
+        android:title="@string/menu_browse_dlpulse_downloads"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_open_dlpulse_folder"

@@ -32,31 +32,13 @@
         android:textSize="14sp"
         android:textColor="@color/steam_parchment" />
 
-    <LinearLayout
+    <Button
+        android:id="@+id/btnPlay"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="end">
-
-        <Button
-            android:id="@+id/btnPlay"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/search_play_in_app"
-            android:textSize="12sp"
-            android:minHeight="40dp"
-            android:backgroundTint="@color/steam_brass"
-            android:textColor="@color/steam_parchment" />
-
-        <Button
-            android:id="@+id/btnOpen"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/search_open_browser"
-            android:textSize="12sp"
-            android:minHeight="40dp"
-            android:backgroundTint="@color/steam_copper"
-            android:textColor="@color/steam_parchment" />
-    </LinearLayout>
+        android:text="@string/search_play_in_app"
+        android:textSize="12sp"
+        android:minHeight="44dp"
+        android:backgroundTint="@color/steam_brass"
+        android:textColor="@color/steam_parchment" />
 </LinearLayout>

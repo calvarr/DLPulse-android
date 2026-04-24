@@ -190,6 +190,16 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
 
     <string name="menu_open_dlpulse_in_files">Deschide Descărcări/DLPulse în Fișiere</string>
     <string name="menu_browse_device_storage">Răsfoiește stocarea telefonului…</string>
+    <string name="menu_new_folder">Folder nou</string>
+    <string name="menu_browse_pick_library">Folder în app (Music, Video…)</string>
+    <string name="menu_browse_saved_library">Ultimul folder ales</string>
+    <string name="menu_browse_dlpulse_downloads">Înapoi la Download/DLPulse</string>
+    <string name="browse_subtitle_saf_root">Folder ales (Music, Video…)</string>
+    <string name="browse_saf_attached">Poți naviga și reda fișierele din folderul ales.</string>
+    <string name="browse_new_folder_title">Nume folder nou</string>
+    <string name="browse_new_folder_hint">ex. favorite, workout</string>
+    <string name="browse_new_folder_done">Folder creat.</string>
+    <string name="browse_new_folder_failed">Nu s-a putut crea folderul (nume invalid sau există deja).</string>
     <string name="browse_disconnect_cast">Închide proiectarea</string>
     <string name="browse_toolbar_path">Download/DLPulse</string>
     <string name="browse_filter_label">Filtrează după nume</string>
@@ -214,7 +224,6 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="cd_browse_playlist_play">Redă playlist</string>
     <string name="cd_browse_selection_share">Partajă selecția</string>
     <string name="cd_browse_playlist_cast">Proiectează playlist</string>
-    <string name="search_open_browser">Deschide</string>
     <string name="search_play_in_app">Redă</string>
     <string name="search_play_preparing">Se pregătește redarea…</string>
     <string name="search_play_failed">Nu s-a putut porni redarea.</string>
