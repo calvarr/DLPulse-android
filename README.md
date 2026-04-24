@@ -33,6 +33,8 @@ git tag -a v1.0.1 -m "Release 1.0.1"
 git push origin v1.0.1
 ```
 
+**If a release exists but has no APK:** an older workflow run likely failed before the upload step (for example missing Android SDK platform packages). After the workflow fix on `main`, either **push a new tag** (e.g. `v1.0.2`) or delete the remote tag and tag again, then `git push origin v1.0.1 --force` (only if you are sure no one depends on that tag).
+
 You can also run the workflow manually from the **Actions** tab (**workflow_dispatch**); the APK is uploaded as a workflow **artifact** (no GitHub Release unless the run is on a tag).
 
 Install release APKs by sideloading (unknown sources / “Install unknown apps” for your browser or file manager).
