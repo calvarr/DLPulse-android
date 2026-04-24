@@ -20,7 +20,20 @@
 
 ## GitHub Releases
 
-Prebuilt APKs are attached to [Releases](https://github.com/calvarr/DLPulse-android/releases). Install by sideloading the APK (unknown sources / “Install unknown apps” for your browser or file manager).
+Prebuilt APKs are on [Releases](https://github.com/calvarr/DLPulse-android/releases).
+
+### Automated builds (Actions)
+
+When you **push a version tag** whose name starts with `v` (for example `v1.0.1`), [GitHub Actions](https://github.com/calvarr/DLPulse-android/actions) runs `./gradlew assembleRelease`, signs the APK with the standard debug keystore (same as local sideload builds), and **creates a GitHub Release** attaching `DLPulse-<tag>.apk`.
+
+```bash
+git tag -a v1.0.1 -m "Release 1.0.1"
+git push origin v1.0.1
+```
+
+You can also run the workflow manually from the **Actions** tab (**workflow_dispatch**); the APK is uploaded as a workflow **artifact** (no GitHub Release unless the run is on a tag).
+
+Install release APKs by sideloading (unknown sources / “Install unknown apps” for your browser or file manager).
 
 ---
 

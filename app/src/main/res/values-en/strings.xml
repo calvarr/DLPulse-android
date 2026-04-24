@@ -58,7 +58,10 @@
     <string name="main_sites_note_title">Note — links &amp; sites</string>
     <string name="main_sites_note_intro">You can use links from other sites (not only YouTube) in two ways:\n\n• Paste the address into the “URL or search” field below, then tap “Search”.\n\n• From a browser or the YouTube app (or another app), use “Share” and pick DLPulse — this app opens and you can download video or audio (pick quality) or only analyze the link.\n\nTechnically, downloads use yt-dlp (see below).</string>
 
-    <string name="main_sites_info_body"><![CDATA[Note: not only YouTube — this app uses yt-dlp and can download from many other sites when an extractor exists.
+    <string name="main_sites_info_body"><![CDATA[DLPulse Android project page (source & official releases):
+https://github.com/calvarr/DLPulse-android
+
+Note: not only YouTube — this app uses yt-dlp and can download from many other sites when an extractor exists.
 
 Official list of sites (long, updated often):
 https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md
