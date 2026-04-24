@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_browse_flat_toggle"
+        android:title="@string/menu_browse_show_flat"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_open_dlpulse_folder"
+        android:title="@string/menu_open_dlpulse_in_files"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_browse_device_storage"
+        android:title="@string/menu_browse_device_storage"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_disconnect_cast"
+        android:title="@string/browse_disconnect_cast"
+        app:showAsAction="ifRoom" />
+</menu>

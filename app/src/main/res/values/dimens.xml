@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="btn_min_height">58dp</dimen>
+    <dimen name="btn_text_size">16sp</dimen>
+    <dimen name="pad_screen">18dp</dimen>
+</resources>

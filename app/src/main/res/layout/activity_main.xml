@@ -1,0 +1,475 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:padding="@dimen/pad_screen"
+        android:background="@color/steam_bg">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:padding="12dp"
+                android:background="@drawable/bg_panel_steampunk"
+                android:text="@string/main_app_tagline"
+                android:textColor="@color/steam_parchment"
+                android:textSize="14sp"
+                android:lineSpacingExtra="3dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:background="@drawable/bg_panel_steampunk">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/main_stream_url_label"
+                    android:textColor="@color/steam_brass"
+                    android:textSize="13sp"
+                    android:fontFamily="serif" />
+
+                <TextView
+                    android:id="@+id/textStreamUrl"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textIsSelectable="true"
+                    android:fontFamily="monospace"
+                    android:textColor="@color/steam_parchment"
+                    android:textSize="12sp"
+                    android:lineSpacingExtra="2dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/btnIconUpdate"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_icon_button_steampunk"
+                    android:contentDescription="@string/cd_update"
+                    android:padding="12dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_action_update" />
+
+                <ImageButton
+                    android:id="@+id/btnIconDonate"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_icon_button_steampunk"
+                    android:contentDescription="@string/cd_donate"
+                    android:padding="12dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_action_donate" />
+
+                <ImageButton
+                    android:id="@+id/btnIconFolder"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_icon_button_steampunk"
+                    android:contentDescription="@string/cd_folder"
+                    android:padding="12dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_action_folder" />
+
+                <ImageButton
+                    android:id="@+id/btnIconCredits"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_icon_button_steampunk"
+                    android:contentDescription="@string/cd_credits"
+                    android:padding="12dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_action_credits" />
+
+                <Button
+                    android:id="@+id/btnLangMenu"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_icon_button_steampunk"
+                    android:contentDescription="@string/cd_language_menu"
+                    android:padding="8dp"
+                    android:text="@string/lang_button_ro"
+                    android:textAllCaps="false"
+                    android:textColor="@color/steam_parchment"
+                    android:textSize="15sp"
+                    style="@style/Widget.AppCompat.Button.Borderless" />
+            </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/main_url_label"
+            android:textSize="13sp"
+            android:textColor="@color/steam_parchment_dim" />
+
+        <EditText
+            android:id="@+id/inputUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/main_url_hint"
+            android:inputType="textUri|textCapSentences|textMultiLine"
+            android:maxLines="3"
+            android:textColor="@color/steam_parchment"
+            android:textColorHint="@color/steam_parchment_dim"
+            android:background="@drawable/bg_panel_steampunk"
+            android:padding="12dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="10dp" />
+
+        <Button
+            android:id="@+id/btnGo"
+            style="@style/Widget.DLPulse.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/btn_min_height"
+            android:text="@string/main_search"
+            android:layout_marginBottom="10dp" />
+
+        <ProgressBar
+            android:id="@+id/progressPrepare"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/steam_brass"
+            android:visibility="gone"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/downloadProgressContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:padding="10dp"
+            android:background="@drawable/bg_panel_steampunk"
+            android:layout_marginBottom="10dp">
+
+            <ProgressBar
+                android:id="@+id/downloadProgressBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:progressDrawable="@drawable/progress_horizontal_steampunk"
+                android:progress="0" />
+
+            <TextView
+                android:id="@+id/downloadProgressText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textSize="13sp"
+                android:textColor="@color/steam_brass"
+                android:fontFamily="serif" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:padding="12dp"
+            android:textColor="@color/steam_parchment"
+            android:background="@drawable/bg_panel_steampunk"
+            android:visibility="gone"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/urlOptionsRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:padding="10dp"
+            android:background="@drawable/bg_panel_steampunk"
+            android:layout_marginBottom="8dp">
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchNoPlaylist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/main_switch_first_only"
+                android:textSize="14sp"
+                android:textColor="@color/steam_parchment" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="@color/steam_parchment_dim"
+                android:text="@string/main_switch_hint" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/playlistPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/main_playlist_title"
+                android:textStyle="bold"
+                android:textColor="@color/steam_brass"
+                android:fontFamily="serif"
+                android:textSize="16sp"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="@color/steam_parchment_dim"
+                android:text="@string/main_playlist_hint"
+                android:layout_marginBottom="6dp" />
+
+            <CheckBox
+                android:id="@+id/cbPlaylistSelectAll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/main_select_all"
+                android:textColor="@color/steam_parchment" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/playlistRecycler"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:minHeight="48dp" />
+
+            <Button
+                android:id="@+id/btnDownloadPlaylistSelected"
+                style="@style/Widget.DLPulse.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/btn_min_height"
+                android:layout_marginTop="8dp"
+                android:text=""
+                android:enabled="false" />
+
+            <Button
+                android:id="@+id/btnDownloadPlaylistFull"
+                style="@style/Widget.DLPulse.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/btn_min_height"
+                android:layout_marginTop="6dp"
+                android:text="@string/main_download_full_playlist"
+                android:alpha="0.92" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/errorText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/steam_error"
+            android:textSize="14sp"
+            android:padding="8dp"
+            android:visibility="gone"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/searchPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/main_results"
+                android:textStyle="bold"
+                android:textColor="@color/steam_brass"
+                android:fontFamily="serif"
+                android:textSize="16sp"
+                android:layout_marginBottom="4dp" />
+
+            <CheckBox
+                android:id="@+id/cbSelectAll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/main_select_all"
+                android:textColor="@color/steam_parchment" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/searchRecycler"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:minHeight="48dp" />
+
+            <Button
+                android:id="@+id/btnDownloadBatch"
+                style="@style/Widget.DLPulse.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/btn_min_height"
+                android:layout_marginTop="8dp"
+                android:text=""
+                android:enabled="false" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/main_format_label"
+            android:textSize="12sp"
+            android:textColor="@color/steam_parchment_dim"
+            android:layout_marginTop="8dp" />
+
+        <Spinner
+            android:id="@+id/formatSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="52dp"
+            android:layout_marginBottom="12dp"
+            android:backgroundTint="@color/steam_stroke" />
+
+        <Button
+            android:id="@+id/btnDownload"
+            style="@style/Widget.DLPulse.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/btn_min_height"
+            android:text="@string/main_download"
+            android:enabled="false"
+            android:layout_marginBottom="16dp" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <ImageButton
+        android:id="@+id/btnSitesNote"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="@dimen/pad_screen"
+        android:layout_marginBottom="@dimen/pad_screen"
+        android:background="@drawable/bg_icon_button_steampunk"
+        android:contentDescription="@string/cd_sites_note"
+        android:padding="8dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_info_note" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="@dimen/pad_screen"
+        android:layout_marginBottom="@dimen/pad_screen"
+        android:importantForAccessibility="no"
+        android:text="@string/app_version_label"
+        android:textColor="@color/steam_parchment_dim"
+        android:textSize="11sp"
+        android:alpha="0.85" />
+
+    <FrameLayout
+        android:id="@+id/terminalOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#B31C1410"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_margin="@dimen/pad_screen"
+            android:background="@drawable/bg_panel_steampunk"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:text="@string/main_terminal_title"
+                android:textColor="@color/steam_brass"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_terminal_subtitle"
+                android:textColor="@color/steam_parchment_dim"
+                android:textSize="11sp" />
+
+            <ProgressBar
+                android:id="@+id/terminalProgress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:indeterminate="true"
+                android:indeterminateTint="@color/steam_brass"
+                android:visibility="gone" />
+
+            <ScrollView
+                android:id="@+id/terminalScroll"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:layout_marginTop="8dp"
+                android:background="#66000000"
+                android:fillViewport="true"
+                android:padding="10dp"
+                android:scrollbars="vertical">
+
+                <TextView
+                    android:id="@+id/terminalLog"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:textColor="#8FBC8F"
+                    android:textIsSelectable="true"
+                    android:textSize="11sp"
+                    android:lineSpacingExtra="2dp" />
+            </ScrollView>
+
+            <Button
+                android:id="@+id/btnTerminalClose"
+                style="@style/Widget.DLPulse.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:minHeight="@dimen/btn_min_height"
+                android:text="@string/main_close"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>

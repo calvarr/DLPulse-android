@@ -1,0 +1,19 @@
+# Gradle / Android
+.gradle/
+build/
+**/build/
+local.properties
+*.iml
+.idea/
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Large / local junk
+*.hprof
+
+# Keystores (never commit real release keys)
+*.jks
+*.keystore
+keystore.properties

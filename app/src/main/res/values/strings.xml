@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DLPulse</string>
+    <string name="app_version_label">V1.0</string>
+    <string name="cast_stream_channel_name">Proiecție Chromecast</string>
+    <string name="cast_stream_notification_title">Proiecție activă</string>
+    <string name="cast_stream_notification_text">Stream local pentru Chromecast</string>
+    <string name="cast_notif_play">Redă</string>
+    <string name="cast_notif_pause">Pauză</string>
+    <string name="cast_notif_back_15">−15s</string>
+    <string name="cast_notif_fwd_15">+15s</string>
+    <string name="cast_notif_disconnect">Închide</string>
+    <string name="cast_notif_waiting">Pregătire / așteaptă conexiunea</string>
+    <string name="cast_notif_connected">Proiecție activă</string>
+    <string name="cast_bar_title">Proiecție Chromecast</string>
+    <string name="player_back">Înapoi</string>
+    <string name="browse_subtitle_root">Foldere și fișiere (rădăcină DLPulse)</string>
+    <string name="browse_subtitle_flat">Toate fișierele (toate subfolderele)</string>
+    <string name="menu_browse_show_flat">Listă completă (fără foldere)</string>
+    <string name="menu_browse_show_folders">Pe foldere</string>
+
+    <string name="cd_update">Actualizare dependențe</string>
+    <string name="cd_donate">Susține proiectul</string>
+    <string name="cd_folder">Folder descărcări</string>
+    <string name="cd_credits">Mulțumiri proiecte open source</string>
+    <string name="cd_language_menu">Limbă</string>
+    <string name="cd_menu_play_file">Redă fișierul</string>
+    <string name="cd_menu_share_file">Partajă fișierul</string>
+    <string name="cd_menu_cast_file">Proiectează pe Chromecast</string>
+
+    <string name="player_cast_no_http">Nu pot porni serverul HTTP: fără IP Wi‑Fi util. Dezactivează VPN ca Chromecast să poată accesa telefonul.</string>
+    <string name="player_cast_no_session">Sesiune Cast indisponibilă.</string>
+    <string name="player_cast_head_warn">Verificare: URL-ul local nu răspunde. Verifică Wi‑Fi.</string>
+    <string name="player_cast_load_failed">Cast nu a pornit redarea: %1$s</string>
+    <string name="lang_option_ro">RO — română</string>
+    <string name="lang_option_en">EN — engleză</string>
+
+    <string name="main_url_label">URL sau căutare</string>
+    <string name="main_url_hint">https://… sau cuvinte</string>
+    <string name="main_search">Caută</string>
+    <string name="main_switch_first_only">Doar primul videoclip (fără playlist întreg)</string>
+    <string name="main_switch_hint">Dacă vezi lista de mai jos, alege melodii. Altfel folosește comutatorul.</string>
+    <string name="main_playlist_title">Melodii din playlist</string>
+    <string name="main_playlist_hint">Bifează ce vrei să descarci, apoi „Descarcă selectate”. Sau „Tot playlist-ul”.</string>
+    <string name="main_select_all">Selectează toate</string>
+    <string name="main_download_selected">Descarcă selectate (%1$d)</string>
+    <string name="main_download_full_playlist">Descarcă tot playlist-ul</string>
+    <string name="main_results">Rezultate</string>
+    <string name="main_format_label">Format</string>
+    <string name="main_download">Descarcă</string>
+    <string name="main_terminal_title">Consolă actualizare</string>
+    <string name="main_terminal_subtitle">Ieșirea comenzilor apare mai jos (stil terminal).</string>
+    <string name="main_close">Închide</string>
+
+    <string name="main_app_tagline">Aplicație pentru descărcare video/audio de pe YouTube, redare, partajare fișiere și streaming local (Chromecast).</string>
+    <string name="cd_sites_note">Notă: linkuri, partajare, site-uri suportate</string>
+
+    <string name="main_sites_note_title">Notă — linkuri &amp; site-uri</string>
+    <string name="main_sites_note_intro">Linkurile de pe alte site-uri (nu doar YouTube) le poți folosi în două moduri:\n\n• Lipește adresa în câmpul „URL sau căutare” de mai jos, apoi apasă „Caută”.\n\n• Din browser sau din aplicația YouTube (sau altă aplicație), folosește „Partajare” (Share) și alege DLPulse — se deschide această aplicație și poți alege să descarci video sau audio (cu calitatea dorită) sau doar să analizezi linkul.\n\nTehnic, descărcarea se bazează pe yt-dlp (vezi mai jos).</string>
+
+    <string name="main_sites_info_body"><![CDATA[Notă: nu doar YouTube — aplicația folosește yt-dlp și poate descărca de pe multe alte site-uri dacă există extractor.
+
+Lista oficială de site-uri (lungă, actualizată des):
+https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md
+
+Documentație extractori:
+https://github.com/yt-dlp/yt-dlp/wiki/Extractors
+
+În terminal (Linux / macOS / Windows) poți lista toți extractorii:
+yt-dlp --list-extractors
+
+Filtrare la afișare (exemplu doar linii care conțin „youtube”):
+yt-dlp --list-extractors | grep -i youtube]]></string>
+
+    <string name="share_menu_title">Link primit</string>
+    <string name="share_menu_video">Descarcă video (alege calitatea)</string>
+    <string name="share_menu_audio">Descarcă doar audio (alege calitatea)</string>
+    <string name="share_menu_open_analyze">Deschide în aplicație și analizează linkul</string>
+    <string name="share_pick_video_quality">Calitate video</string>
+    <string name="share_pick_audio_quality">Calitate audio</string>
+    <string name="share_no_url_in_text">Nu s-a găsit un link http(s) în textul partajat.</string>
+
+    <string name="main_stream_url_label">Adresă stream (Chromecast)</string>
+    <string name="main_stream_url_unavailable">— (conectează-te la Wi‑Fi pentru a vedea adresa LAN)</string>
+
+    <string name="main_credits_title">Thanks to open source projects</string>
+    <string name="main_credits_body">This app builds on open‑source software. Thank you to the authors and contributors of:\n\n• yt‑dlp — https://github.com/yt-dlp/yt-dlp\n• FFmpeg — https://ffmpeg.org\n• youtubedl‑android — https://github.com/yausername/youtubedl-android (maintained packages used by this app)\n• NanoHTTPD — https://github.com/NanoHttpd/nanohttpd\n• Android Jetpack (AndroidX), Material Components\n• Media3 (ExoPlayer) — https://developer.android.com/jetpack/androidx/releases/media3\n• Google Cast SDK for Android\n• Coil — https://github.com/coil-kt/coil\n• Kotlin — https://kotlinlang.org\n\n… and all other libraries bundled with the app.</string>
+
+    <string name="main_dialog_save_title">Unde salvăm fișierele?</string>
+    <string name="main_save_public">Descărcări publice (folder DLPulse)</string>
+    <string name="main_save_other">Alt folder (card, Drive, etc.)</string>
+    <string name="main_cancel">Anulează</string>
+
+    <string name="toast_enter_url">Introduceți un URL sau un termen de căutare</string>
+    <string name="toast_playlist_fallback">Lista nu a putut fi afișată; poți folosi „Descarcă” pentru tot playlist-ul.</string>
+
+    <string name="err_init_ytdlp">Init yt-dlp/ffmpeg: %1$s\nVerifică că ai instalat ultimul APK și spațiu liber.</string>
+    <string name="err_update_ytdlp">Actualizare yt-dlp: %1$s\nVerifică conexiunea la internet (prima deschidere).</string>
+    <string name="err_url_unreachable">Nu s-a putut accesa URL-ul.</string>
+    <string name="err_playlist_load">Nu s-a putut încărca lista din playlist.</string>
+    <string name="err_search_failed">Căutarea a eșuat</string>
+    <string name="err_no_results">Niciun rezultat.</string>
+    <string name="err_download_local_failed">Descărcarea locală a eșuat:\n%1$s</string>
+    <string name="err_download_failed">Descărcarea a eșuat:\n%1$s</string>
+    <string name="err_generic">eroare</string>
+    <string name="err_no_files_after">Nu s-au găsit fișiere după descărcare.</string>
+    <string name="err_no_successful">Nicio descărcare reușită.</string>
+
+    <string name="progress_playlist">Playlist · %1$d%%</string>
+    <string name="progress_clip">Clip %1$d/%2$d · %3$d%%</string>
+    <string name="eta_min_sec"> · ~%1$dm %2$ds</string>
+    <string name="eta_sec_only"> · ~%1$ds</string>
+
+    <string name="main_term_banner">$ dlpulse — actualizare dependențe</string>
+    <string name="main_term_info_net">[INFO] Rețea: verifică conexiunea la internet.</string>
+    <string name="main_term_step_ytdlp">[STEP] yt-dlp (canal STABLE) — descărcare / înlocuire binar…</string>
+    <string name="main_term_fail_init">[FAIL] Inițializare aplicație: %1$s</string>
+    <string name="main_term_hint_reinstall">[HINT] Reinstalează APK-ul sau eliberează spațiu.</string>
+    <string name="main_term_ok_ytdlp">[OK] yt-dlp: actualizare finalizată (sau deja la ultima versiune).</string>
+    <string name="main_term_fail_ytdlp">[FAIL] yt-dlp: %1$s</string>
+    <string name="main_term_unknown_error">eroare necunoscută</string>
+    <string name="main_term_step_ffmpeg">[STEP] FFmpeg (bibliotecă nativă din APK)…</string>
+    <string name="main_term_ok_ffmpeg">[OK] ffmpeg: modul disponibil (actualizare prin nou APK).</string>
+    <string name="main_term_warn_ffmpeg">[WARN] ffmpeg: instanță indisponibilă.</string>
+    <string name="main_term_info_modules">[INFO] Alte module (Python încorporat etc.) se livrează cu APK-ul.</string>
+    <string name="main_term_done">$ Gata. Poți închide această consolă.</string>
+
+    <string name="toast_batch_done">Gata: %1$d fișier(e).\nSalvat în app:\n%2$s\nExport suplimentar: %3$d/%1$d.%4$s</string>
+    <string name="toast_some_errors">\nUnele: %1$s</string>
+
+    <string name="export_private_only">Nu s-a copiat în afara aplicației (ai ales doar memoria privată).</string>
+    <string name="export_user_ok">Copiat și în folderul ales.</string>
+    <string name="export_user_partial">Parțial în folderul ales (%1$d/%2$d); restul doar în calea de mai sus.</string>
+    <string name="export_user_fail">Nu s-a putut scrie în folderul ales; fișierele sunt în calea de mai sus.</string>
+    <string name="export_public_q">Copiat și în Descărcări → DLPulse.</string>
+    <string name="export_public_ok">Copiat în Descărcări publice.</string>
+    <string name="export_public_partial">Export suplimentar: %1$d/%2$d.</string>
+    <string name="toast_done_files">Gata: %1$s\n\nSalvare locală (sursă):\n%2$s\n\n%3$s</string>
+
+    <string-array name="format_preset_labels">
+        <item>Video – cea mai bună calitate (video+audio)</item>
+        <item>Video 1080p</item>
+        <item>Video 720p</item>
+        <item>Video 480p</item>
+        <item>Video 360p</item>
+        <item>Doar audio – MP3 320 kbps</item>
+        <item>Doar audio – MP3 192 kbps</item>
+        <item>Doar audio – MP3 128 kbps</item>
+        <item>Doar audio – M4A (AAC)</item>
+        <item>Doar audio – OPUS</item>
+    </string-array>
+
+    <string name="lang_button_ro">RO</string>
+    <string name="lang_button_en">EN</string>
+
+    <string name="cast_hint_mkv">MKV: Chromecast implicit adesea nu redă. Încearcă MP4 (H.264/AAC).</string>
+    <string name="cast_hint_avi">AVI: de obicei nesuportat pe receiverul implicit. Folosește MP4.</string>
+    <string name="cast_hint_mov">MOV: poate eșua pe Cast implicit. Preferă MP4.</string>
+    <string name="cast_hint_ts">TS: de obicei nesuportat direct. Preferă MP4.</string>
+    <string name="cast_hint_wmv">WMV: nesuportat pe Cast implicit.</string>
+    <string name="cast_hint_unknown">Format necunoscut: receiverul implicit preferă MP4 sau WebM.</string>
+
+    <string name="ytdlp_err_unknown">Eroare necunoscută.</string>
+    <string name="ytdlp_hint_network">— Rețea/DNS: verifică Wi‑Fi sau date mobile, încearcă fără VPN sau alt DNS.</string>
+    <string name="err_preset_invalid">Format invalid</string>
+    <string name="err_download_exit_code">cod %1$d</string>
+    <string name="err_no_new_output_file">Nu s-a creat niciun fișier nou.</string>
+
+    <string name="download_cannot_play">Nu pot reda: %1$s</string>
+    <string name="download_chooser_external">Redă cu</string>
+    <string name="download_no_player_app">Nu s-a găsit o aplicație pentru redare.</string>
+    <string name="share_chooser_title">Trimite fișierul</string>
+    <string name="share_chooser_multiple_title">Trimite fișierele</string>
+    <string name="share_failed">Partaj eșuat.</string>
+
+    <string name="downloads_folder_chooser_title">Deschide folderul</string>
+    <string name="downloads_folder_manual_hint">Deschide manual: Descărcări → DLPulse</string>
+
+    <string name="menu_open_dlpulse_in_files">Deschide Descărcări/DLPulse în Fișiere</string>
+    <string name="menu_browse_device_storage">Răsfoiește stocarea telefonului…</string>
+    <string name="browse_disconnect_cast">Închide proiectarea</string>
+    <string name="browse_toolbar_path">Download/DLPulse</string>
+    <string name="browse_filter_label">Filtrează după nume</string>
+    <string name="browse_select_all_files">Selectează toate fișierele din folder</string>
+    <string name="browse_rename_title">Redenumește fișierul</string>
+    <string name="browse_ok">OK</string>
+    <string name="browse_rename_done">Fișier redenumit.</string>
+    <string name="browse_rename_failed">Nu s-a putut redenumi (nume invalid, fișier existent sau permisiuni).</string>
+    <string name="browse_delete_confirm_title">Ștergere fișier</string>
+    <string name="browse_delete_confirm_message">Ștergi „%1$s”? Această acțiune nu poate fi anulată.</string>
+    <string name="browse_delete">Șterge</string>
+    <string name="browse_delete_done">Fișier șters.</string>
+    <string name="browse_delete_failed">Nu s-a putut șterge fișierul.</string>
+    <string name="cd_menu_rename_file">Redenumește</string>
+    <string name="cd_menu_delete_file">Șterge fișierul</string>
+    <string name="browse_empty_permission">Acordă permisiunea de citire (video/audio) ca să vezi fișierele din folder.</string>
+    <string name="browse_empty_folder">Folderul e gol. Creează subfoldere (ex. audio, video) în Download/DLPulse.</string>
+    <string name="browse_empty_no_files">Nu s-au găsit fișiere în Download/DLPulse.</string>
+    <string name="browse_empty_no_match">Nicio potrivire pentru „%1$s”.</string>
+    <string name="browse_selected_one">1 selectat</string>
+    <string name="browse_selected_n">%1$d selectate</string>
+    <string name="cd_browse_playlist_play">Redă playlist</string>
+    <string name="cd_browse_selection_share">Partajă selecția</string>
+    <string name="cd_browse_playlist_cast">Proiectează playlist</string>
+    <string name="search_open_browser">Deschide</string>
+    <string name="search_play_in_app">Redă</string>
+    <string name="search_play_preparing">Se pregătește redarea…</string>
+    <string name="search_play_failed">Nu s-a putut porni redarea.</string>
+    <string name="search_play_no_url">Nu s-a obținut un URL de stream.</string>
+    <string name="search_play_multi_stream">Formatul necesită îmbinare audio-video; încerc altă variantă…</string>
+
+    <string name="cast_toast_http_after_connect">Nu pot porni serverul HTTP după conectare. Verifică Wi‑Fi / VPN.</string>
+    <string name="cast_connect_failed">Conectare Cast eșuată (cod %1$d).</string>
+    <string name="cast_resume_failed">Reluare sesiune Cast eșuată (cod %1$d).</string>
+    <string name="cast_playlist_finished">Proiecție: playlist încheiat.</string>
+    <string name="cast_projection_closed">Proiectarea a fost închisă.</string>
+    <string name="cast_log_idle_error">Cast IDLE_ERROR: receiverul nu a putut reda fluxul (codec/container sau URL inaccesibil de pe TV).</string>
+    <string name="cast_toast_playback_error">Chromecast: eroare la redare (codec, container sau URL inaccesibil de pe TV). Încearcă MP4 (H.264/AAC) și aceeași rețea Wi‑Fi.</string>
+    <string name="cast_needs_play_services">Proiectarea necesită Google Play Services.</string>
+    <string name="cast_http_start_failed">Nu pot porni serverul HTTP: fără IP Wi‑Fi util. Dezactivează VPN/Tailscale ca Chromecast să poată accesa telefonul.</string>
+    <string name="cast_pick_tv">Alege televizorul / Chromecast din listă.</string>
+    <string name="cast_next_file_failed">Nu pot deschide următorul fișier pentru proiecție.</string>
+    <string name="cast_head_wifi_long">Verificare: URL-ul local nu răspunde la HEAD. TV-ul poate să nu primească stream-ul; verifică Wi‑Fi.</string>
+    <string name="default_media_title">media</string>
+
+    <string name="ytdlp_err_read_url">Nu s-a putut citi URL-ul (cod %1$d).</string>
+    <string name="ytdlp_err_unexpected_response">Răspuns neașteptat de la yt-dlp.</string>
+    <string name="ytdlp_no_title">Fără titlu</string>
+    <string name="ytdlp_desc_channel">Canal: %1$s (%2$d videoclipuri)</string>
+    <string name="ytdlp_desc_playlist">Playlist: %1$s (%2$d videoclipuri)</string>
+    <string name="ytdlp_desc_video">Videoclip: %1$s</string>
+    <string name="ytdlp_search_failed">Căutare eșuată.</string>
+    <string name="ytdlp_invalid_json">Răspuns JSON invalid.</string>
+    <string name="ytdlp_playlist_read_failed">Nu s-a putut citi playlist-ul.</string>
+</resources>

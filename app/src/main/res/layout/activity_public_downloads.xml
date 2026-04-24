@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/steam_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="@dimen/pad_screen">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbarPublicDownloads"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/steam_bg_panel"
+            app:title="@string/browse_toolbar_path"
+            app:titleTextColor="@color/steam_brass" />
+
+        <LinearLayout
+            android:id="@+id/castPlaybackBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_panel_steampunk"
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/castPlaybackTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/steam_brass"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <androidx.mediarouter.app.MediaRouteButton
+                    android:id="@+id/castRouteButtonDownloads"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:mediaRouteTypes="user"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp" />
+
+                <ImageButton
+                    android:id="@+id/castBarPlayPause"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/cast_notif_play"
+                    android:padding="8dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_action_play" />
+
+                <TextView
+                    android:id="@+id/castBarSeekBack"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:gravity="center"
+                    android:minWidth="44dp"
+                    android:paddingHorizontal="6dp"
+                    android:text="@string/cast_notif_back_15"
+                    android:textColor="@color/steam_parchment"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/castBarSeekFwd"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:gravity="center"
+                    android:minWidth="44dp"
+                    android:paddingHorizontal="6dp"
+                    android:text="@string/cast_notif_fwd_15"
+                    android:textColor="@color/steam_parchment"
+                    android:textSize="12sp" />
+
+                <ImageButton
+                    android:id="@+id/castBarDisconnect"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/cast_notif_disconnect"
+                    android:padding="8dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_close" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/browse_filter_label"
+            android:textColor="@color/steam_parchment_dim"
+            android:textSize="12sp" />
+
+        <EditText
+            android:id="@+id/inputPublicFilter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_panel_steampunk"
+            android:imeOptions="actionSearch"
+            android:inputType="text|textCapSentences"
+            android:padding="12dp"
+            android:textColor="@color/steam_parchment"
+            android:textColorHint="@color/steam_parchment_dim" />
+
+        <CheckBox
+            android:id="@+id/cbBrowseSelectAllFiles"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/browse_select_all_files"
+            android:textColor="@color/steam_parchment"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/publicDownloadsEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:padding="10dp"
+            android:textColor="@color/steam_parchment_dim"
+            android:textSize="13sp"
+            android:visibility="gone" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerPublicDownloads"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:minHeight="120dp"
+            android:scrollbars="vertical" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/selectionActionBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_panel_steampunk"
+        android:elevation="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="10dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/selectionCountLabel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/steam_parchment"
+            android:textSize="13sp" />
+
+        <ImageButton
+            android:id="@+id/btnSelectionPlay"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_browse_playlist_play"
+            android:padding="10dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_action_play" />
+
+        <ImageButton
+            android:id="@+id/btnSelectionShare"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_browse_selection_share"
+            android:padding="10dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_action_share" />
+
+        <ImageButton
+            android:id="@+id/btnSelectionCast"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_browse_playlist_cast"
+            android:padding="10dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_action_cast" />
+    </LinearLayout>
+</FrameLayout>

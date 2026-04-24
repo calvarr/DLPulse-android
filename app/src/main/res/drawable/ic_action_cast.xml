@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Din cast.svg (rădăcină proiect) — SVG Repo, viewBox 24×24, contur -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4,10V7C4,6.44772 4.44772,6 5,6H19C19.5523,6 20,6.44772 20,7V17C20,17.5523 19.5523,18 19,18H12M6,18C6,16.8954 5.10457,16 4,16M8,18C8,15.7909 6.20914,14 4,14M4,12C7.31371,12 10,14.6863 10,18"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@color/steam_parchment"
+        android:strokeWidth="1.35"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bazat pe dlpulse_icon.svg (fără filtre SVG incompatibile) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <path
+        android:pathData="M115,0 L397,0 Q512,0 512,115 L512,397 Q512,512 397,512 L115,512 Q0,512 0,397 L0,115 Q0,0 115,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endX="0"
+                android:endY="512"
+                android:startX="0"
+                android:startY="0"
+                android:type="linear">
+                <item
+                    android:color="#ff3333"
+                    android:offset="0" />
+                <item
+                    android:color="#c0000a"
+                    android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:fillAlpha="0.97"
+        android:fillColor="#FFFFFF"
+        android:pathData="M96,130 L416,130 L256,390 Z" />
+</vector>

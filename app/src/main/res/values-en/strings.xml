@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DLPulse</string>
+    <string name="app_version_label">V1.0</string>
+    <string name="cast_stream_channel_name">Chromecast casting</string>
+    <string name="cast_stream_notification_title">Casting active</string>
+    <string name="cast_stream_notification_text">Local stream for Chromecast</string>
+    <string name="cast_notif_play">Play</string>
+    <string name="cast_notif_pause">Pause</string>
+    <string name="cast_notif_back_15">−15s</string>
+    <string name="cast_notif_fwd_15">+15s</string>
+    <string name="cast_notif_disconnect">Stop</string>
+    <string name="cast_notif_waiting">Preparing / waiting for connection</string>
+    <string name="cast_notif_connected">Casting active</string>
+    <string name="cast_bar_title">Chromecast</string>
+    <string name="player_back">Back</string>
+    <string name="browse_subtitle_root">Folders and files (DLPulse root)</string>
+    <string name="browse_subtitle_flat">All files (all subfolders)</string>
+    <string name="menu_browse_show_flat">Flat list (no folders)</string>
+    <string name="menu_browse_show_folders">By folder</string>
+
+    <string name="cd_update">Update dependencies</string>
+    <string name="cd_donate">Support the project</string>
+    <string name="cd_folder">Downloads folder</string>
+    <string name="cd_credits">Open source credits</string>
+    <string name="cd_language_menu">Language</string>
+    <string name="cd_menu_play_file">Play file</string>
+    <string name="cd_menu_share_file">Share file</string>
+    <string name="cd_menu_cast_file">Cast to Chromecast</string>
+
+    <string name="player_cast_no_http">Cannot start HTTP server: no usable Wi‑Fi IP. Disable VPN so Chromecast can reach your phone.</string>
+    <string name="player_cast_no_session">Cast session unavailable.</string>
+    <string name="player_cast_head_warn">Local URL check failed. Check Wi‑Fi.</string>
+    <string name="player_cast_load_failed">Cast failed to start playback: %1$s</string>
+    <string name="lang_option_ro">RO — Romanian</string>
+    <string name="lang_option_en">EN — English</string>
+
+    <string name="main_url_label">URL or search</string>
+    <string name="main_url_hint">https://… or keywords</string>
+    <string name="main_search">Search</string>
+    <string name="main_switch_first_only">First video only (not whole playlist)</string>
+    <string name="main_switch_hint">If you see the list below, pick tracks. Otherwise use the switch.</string>
+    <string name="main_playlist_title">Playlist tracks</string>
+    <string name="main_playlist_hint">Select what to download, then “Download selected”. Or “Entire playlist”.</string>
+    <string name="main_select_all">Select all</string>
+    <string name="main_download_selected">Download selected (%1$d)</string>
+    <string name="main_download_full_playlist">Download entire playlist</string>
+    <string name="main_results">Results</string>
+    <string name="main_format_label">Format</string>
+    <string name="main_download">Download</string>
+    <string name="main_terminal_title">Update console</string>
+    <string name="main_terminal_subtitle">Command output appears below (terminal style).</string>
+    <string name="main_close">Close</string>
+
+    <string name="main_app_tagline">App for downloading video/audio from YouTube, playback, sharing files, and local streaming (Chromecast).</string>
+    <string name="cd_sites_note">Note: links, sharing, supported sites</string>
+
+    <string name="main_sites_note_title">Note — links &amp; sites</string>
+    <string name="main_sites_note_intro">You can use links from other sites (not only YouTube) in two ways:\n\n• Paste the address into the “URL or search” field below, then tap “Search”.\n\n• From a browser or the YouTube app (or another app), use “Share” and pick DLPulse — this app opens and you can download video or audio (pick quality) or only analyze the link.\n\nTechnically, downloads use yt-dlp (see below).</string>
+
+    <string name="main_sites_info_body"><![CDATA[Note: not only YouTube — this app uses yt-dlp and can download from many other sites when an extractor exists.
+
+Official list of sites (long, updated often):
+https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md
+
+Extractor documentation:
+https://github.com/yt-dlp/yt-dlp/wiki/Extractors
+
+On a terminal (Linux / macOS / Windows) you can list all extractors:
+yt-dlp --list-extractors
+
+Filter output (example: lines containing “youtube”):
+yt-dlp --list-extractors | grep -i youtube]]></string>
+
+    <string name="share_menu_title">Link received</string>
+    <string name="share_menu_video">Download video (pick quality)</string>
+    <string name="share_menu_audio">Download audio only (pick quality)</string>
+    <string name="share_menu_open_analyze">Open in app and analyze link</string>
+    <string name="share_pick_video_quality">Video quality</string>
+    <string name="share_pick_audio_quality">Audio quality</string>
+    <string name="share_no_url_in_text">No http(s) link was found in the shared text.</string>
+
+    <string name="main_stream_url_label">Stream URL (Chromecast)</string>
+    <string name="main_stream_url_unavailable">— (connect to Wi‑Fi to see your LAN address)</string>
+
+    <string name="main_credits_title">Thanks to open source projects</string>
+    <string name="main_credits_body">This app builds on open‑source software. Thank you to the authors and contributors of:\n\n• yt‑dlp — https://github.com/yt-dlp/yt-dlp\n• FFmpeg — https://ffmpeg.org\n• youtubedl‑android — https://github.com/yausername/youtubedl-android (maintained packages used by this app)\n• NanoHTTPD — https://github.com/NanoHttpd/nanohttpd\n• Android Jetpack (AndroidX), Material Components\n• Media3 (ExoPlayer) — https://developer.android.com/jetpack/androidx/releases/media3\n• Google Cast SDK for Android\n• Coil — https://github.com/coil-kt/coil\n• Kotlin — https://kotlinlang.org\n\n… and all other libraries bundled with the app.</string>
+
+    <string name="main_dialog_save_title">Where should we save files?</string>
+    <string name="main_save_public">Public downloads (DLPulse folder)</string>
+    <string name="main_save_other">Other folder (SD card, Drive, etc.)</string>
+    <string name="main_cancel">Cancel</string>
+
+    <string name="toast_enter_url">Enter a URL or search terms</string>
+    <string name="toast_playlist_fallback">Could not show the list; you can use “Download” for the whole playlist.</string>
+
+    <string name="err_init_ytdlp">Init yt-dlp/ffmpeg: %1$s\nMake sure you installed the latest APK and have free space.</string>
+    <string name="err_update_ytdlp">yt-dlp update: %1$s\nCheck your internet connection (first launch).</string>
+    <string name="err_url_unreachable">Could not open that URL.</string>
+    <string name="err_playlist_load">Could not load the playlist.</string>
+    <string name="err_search_failed">Search failed</string>
+    <string name="err_no_results">No results.</string>
+    <string name="err_download_local_failed">Local download failed:\n%1$s</string>
+    <string name="err_download_failed">Download failed:\n%1$s</string>
+    <string name="err_generic">error</string>
+    <string name="err_no_files_after">No files found after download.</string>
+    <string name="err_no_successful">No successful downloads.</string>
+
+    <string name="progress_playlist">Playlist · %1$d%%</string>
+    <string name="progress_clip">Clip %1$d/%2$d · %3$d%%</string>
+    <string name="eta_min_sec"> · ~%1$dm %2$ds</string>
+    <string name="eta_sec_only"> · ~%1$ds</string>
+
+    <string name="main_term_banner">$ dlpulse — dependency update</string>
+    <string name="main_term_info_net">[INFO] Network: check your internet connection.</string>
+    <string name="main_term_step_ytdlp">[STEP] yt-dlp (STABLE channel) — download / replace binary…</string>
+    <string name="main_term_fail_init">[FAIL] App init: %1$s</string>
+    <string name="main_term_hint_reinstall">[HINT] Reinstall the APK or free storage.</string>
+    <string name="main_term_ok_ytdlp">[OK] yt-dlp: update finished (or already up to date).</string>
+    <string name="main_term_fail_ytdlp">[FAIL] yt-dlp: %1$s</string>
+    <string name="main_term_unknown_error">unknown error</string>
+    <string name="main_term_step_ffmpeg">[STEP] FFmpeg (native library from APK)…</string>
+    <string name="main_term_ok_ffmpeg">[OK] ffmpeg: module available (update via new APK).</string>
+    <string name="main_term_warn_ffmpeg">[WARN] ffmpeg: instance unavailable.</string>
+    <string name="main_term_info_modules">[INFO] Other modules (bundled Python, etc.) ship with the APK.</string>
+    <string name="main_term_done">$ Done. You can close this console.</string>
+
+    <string name="toast_batch_done">Done: %1$d file(s).\nSaved in app:\n%2$s\nExtra export: %3$d/%1$d.%4$s</string>
+    <string name="toast_some_errors">\nSome failed: %1$s</string>
+
+    <string name="export_private_only">Not copied outside the app (private storage only).</string>
+    <string name="export_user_ok">Also copied to the folder you picked.</string>
+    <string name="export_user_partial">Partially copied to the folder you picked (%1$d/%2$d); the rest only at the path above.</string>
+    <string name="export_user_fail">Could not write to the folder you picked; files are at the path above.</string>
+    <string name="export_public_q">Also copied to Downloads → DLPulse.</string>
+    <string name="export_public_ok">Copied to public Downloads.</string>
+    <string name="export_public_partial">Extra export: %1$d/%2$d.</string>
+    <string name="toast_done_files">Done: %1$s\n\nLocal save (source):\n%2$s\n\n%3$s</string>
+
+    <string-array name="format_preset_labels">
+        <item>Video – best quality (video+audio)</item>
+        <item>Video 1080p</item>
+        <item>Video 720p</item>
+        <item>Video 480p</item>
+        <item>Video 360p</item>
+        <item>Audio only – MP3 320 kbps</item>
+        <item>Audio only – MP3 192 kbps</item>
+        <item>Audio only – MP3 128 kbps</item>
+        <item>Audio only – M4A (AAC)</item>
+        <item>Audio only – OPUS</item>
+    </string-array>
+
+    <string name="lang_button_ro">RO</string>
+    <string name="lang_button_en">EN</string>
+
+    <string name="cast_hint_mkv">MKV: default Chromecast often won’t play this. Try MP4 (H.264/AAC).</string>
+    <string name="cast_hint_avi">AVI: usually unsupported on the default receiver. Use MP4.</string>
+    <string name="cast_hint_mov">MOV: may fail on default Cast. Prefer MP4.</string>
+    <string name="cast_hint_ts">TS: usually not supported directly. Prefer MP4.</string>
+    <string name="cast_hint_wmv">WMV: not supported on default Cast.</string>
+    <string name="cast_hint_unknown">Unknown format: default receiver prefers MP4 or WebM.</string>
+
+    <string name="ytdlp_err_unknown">Unknown error.</string>
+    <string name="ytdlp_hint_network">— Network/DNS: check Wi‑Fi or mobile data, try without VPN or another DNS.</string>
+    <string name="err_preset_invalid">Invalid format</string>
+    <string name="err_download_exit_code">code %1$d</string>
+    <string name="err_no_new_output_file">No new file was created.</string>
+
+    <string name="download_cannot_play">Cannot play: %1$s</string>
+    <string name="download_chooser_external">Play with</string>
+    <string name="download_no_player_app">No app found to play this.</string>
+    <string name="share_chooser_title">Send file</string>
+    <string name="share_chooser_multiple_title">Send files</string>
+    <string name="share_failed">Share failed.</string>
+
+    <string name="downloads_folder_chooser_title">Open folder</string>
+    <string name="downloads_folder_manual_hint">Open manually: Downloads → DLPulse</string>
+
+    <string name="menu_open_dlpulse_in_files">Open Download/DLPulse in Files</string>
+    <string name="menu_browse_device_storage">Browse device storage…</string>
+    <string name="browse_disconnect_cast">Stop casting</string>
+    <string name="browse_toolbar_path">Download/DLPulse</string>
+    <string name="browse_filter_label">Filter by name</string>
+    <string name="browse_select_all_files">Select all files in this folder</string>
+    <string name="browse_rename_title">Rename file</string>
+    <string name="browse_ok">OK</string>
+    <string name="browse_rename_done">File renamed.</string>
+    <string name="browse_rename_failed">Could not rename (invalid name, file already exists, or permissions).</string>
+    <string name="browse_delete_confirm_title">Delete file</string>
+    <string name="browse_delete_confirm_message">Delete “%1$s”? This cannot be undone.</string>
+    <string name="browse_delete">Delete</string>
+    <string name="browse_delete_done">File deleted.</string>
+    <string name="browse_delete_failed">Could not delete the file.</string>
+    <string name="cd_menu_rename_file">Rename</string>
+    <string name="cd_menu_delete_file">Delete file</string>
+    <string name="browse_empty_permission">Grant read permission (video/audio) to see files in this folder.</string>
+    <string name="browse_empty_folder">Folder is empty. Create subfolders (e.g. audio, video) in Download/DLPulse.</string>
+    <string name="browse_empty_no_files">No files found in Download/DLPulse.</string>
+    <string name="browse_empty_no_match">No matches for \"%1$s\".</string>
+    <string name="browse_selected_one">1 selected</string>
+    <string name="browse_selected_n">%1$d selected</string>
+    <string name="cd_browse_playlist_play">Play playlist</string>
+    <string name="cd_browse_selection_share">Share selection</string>
+    <string name="cd_browse_playlist_cast">Cast playlist</string>
+    <string name="search_open_browser">Open</string>
+    <string name="search_play_in_app">Play</string>
+    <string name="search_play_preparing">Preparing playback…</string>
+    <string name="search_play_failed">Could not start playback.</string>
+    <string name="search_play_no_url">No stream URL was returned.</string>
+    <string name="search_play_multi_stream">Format needs merging audio and video; trying another variant…</string>
+
+    <string name="cast_toast_http_after_connect">Could not start HTTP server after connecting. Check Wi‑Fi / VPN.</string>
+    <string name="cast_connect_failed">Cast connection failed (code %1$d).</string>
+    <string name="cast_resume_failed">Cast session resume failed (code %1$d).</string>
+    <string name="cast_playlist_finished">Cast: playlist finished.</string>
+    <string name="cast_projection_closed">Casting was stopped.</string>
+    <string name="cast_log_idle_error">Cast IDLE_ERROR: receiver could not play stream (codec/container or URL unreachable from TV).</string>
+    <string name="cast_toast_playback_error">Chromecast playback error (codec, container, or URL unreachable from TV). Try MP4 (H.264/AAC) and the same Wi‑Fi.</string>
+    <string name="cast_needs_play_services">Casting requires Google Play Services.</string>
+    <string name="cast_http_start_failed">Cannot start HTTP server: no usable Wi‑Fi IP. Disable VPN/Tailscale so Chromecast can reach your phone.</string>
+    <string name="cast_pick_tv">Pick your TV / Chromecast from the list.</string>
+    <string name="cast_next_file_failed">Could not open the next file for casting.</string>
+    <string name="cast_head_wifi_long">Check: local URL did not respond to HEAD. The TV may not get the stream; check Wi‑Fi.</string>
+    <string name="default_media_title">media</string>
+
+    <string name="ytdlp_err_read_url">Could not read URL (code %1$d).</string>
+    <string name="ytdlp_err_unexpected_response">Unexpected response from yt-dlp.</string>
+    <string name="ytdlp_no_title">No title</string>
+    <string name="ytdlp_desc_channel">Channel: %1$s (%2$d videos)</string>
+    <string name="ytdlp_desc_playlist">Playlist: %1$s (%2$d videos)</string>
+    <string name="ytdlp_desc_video">Video: %1$s</string>
+    <string name="ytdlp_search_failed">Search failed.</string>
+    <string name="ytdlp_invalid_json">Invalid JSON response.</string>
+    <string name="ytdlp_playlist_read_failed">Could not read playlist.</string>
+</resources>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="8dp"
+    android:background="@drawable/bg_panel_steampunk"
+    android:layout_marginBottom="6dp">
+
+    <CheckBox
+        android:id="@+id/checkBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:buttonTint="@color/steam_brass" />
+
+    <ImageView
+        android:id="@+id/thumbnail"
+        android:layout_width="80dp"
+        android:layout_height="45dp"
+        android:scaleType="centerCrop"
+        android:contentDescription="@null"
+        android:background="#1A1510" />
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="8dp"
+        android:maxLines="2"
+        android:textSize="14sp"
+        android:textColor="@color/steam_parchment" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/btnPlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/search_play_in_app"
+            android:textSize="12sp"
+            android:minHeight="40dp"
+            android:backgroundTint="@color/steam_brass"
+            android:textColor="@color/steam_parchment" />
+
+        <Button
+            android:id="@+id/btnOpen"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/search_open_browser"
+            android:textSize="12sp"
+            android:minHeight="40dp"
+            android:backgroundTint="@color/steam_copper"
+            android:textColor="@color/steam_parchment" />
+    </LinearLayout>
+</LinearLayout>

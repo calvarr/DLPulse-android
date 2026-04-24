@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="steam_bg">#1C1410</color>
+    <color name="steam_bg_panel">#2A1F18</color>
+    <color name="steam_brass">#C9A227</color>
+    <color name="steam_brass_dark">#8B6914</color>
+    <color name="steam_copper">#B87333</color>
+    <color name="steam_parchment">#E8DCC4</color>
+    <color name="steam_parchment_dim">#B5A88C</color>
+    <color name="steam_error">#C45C4A</color>
+    <color name="steam_ok_bg">#2D2618</color>
+    <color name="steam_stroke">#5C4A32</color>
+</resources>
