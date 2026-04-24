@@ -18,6 +18,8 @@
    `./gradlew assembleRelease` → `app/build/outputs/apk/release/app-release.apk`  
    For Play Store, replace signing in `app/build.gradle.kts` with your own keystore.
 
+**Update checks:** `versionName` in `app/build.gradle.kts` should match the numeric part of the GitHub release tag (e.g. tag `v1.0.2` → `versionName = "1.0.2"`) so the in-app “new version” logic compares correctly.
+
 ## GitHub Releases
 
 Prebuilt APKs are on [Releases](https://github.com/calvarr/DLPulse-android/releases).

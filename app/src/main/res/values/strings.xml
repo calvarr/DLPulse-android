@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">DLPulse</string>
-    <string name="app_version_label">V1.0</string>
+    <string name="cd_app_version">Versiune aplicație și ultimul release GitHub</string>
+    <string name="app_version_line_base">Versiune %1$s</string>
+    <string name="app_version_with_latest">Versiune %1$s · ultimul release: %2$s</string>
+    <string name="app_version_update_pending">Versiune %1$s · disponibil: %2$s</string>
+    <string name="app_version_newer_than_release">Versiune %1$s (mai nouă decât ultimul release %2$s)</string>
+    <string name="update_available_title">Actualizare disponibilă</string>
+    <string name="update_available_message">Pe GitHub există versiunea %1$s (tu ai %2$s).\n\nRelease: %3$s</string>
+    <string name="update_open_release">Deschide pagina release</string>
+    <string name="update_download_apk">Descarcă APK</string>
+    <string name="update_later">Mai târziu</string>
     <string name="cast_stream_channel_name">Proiecție Chromecast</string>
     <string name="cast_stream_notification_title">Proiecție activă</string>
     <string name="cast_stream_notification_text">Stream local pentru Chromecast</string>

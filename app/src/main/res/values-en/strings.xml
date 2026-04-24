@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">DLPulse</string>
-    <string name="app_version_label">V1.0</string>
+    <string name="cd_app_version">App version and latest GitHub release</string>
+    <string name="app_version_line_base">Version %1$s</string>
+    <string name="app_version_with_latest">Version %1$s · latest release: %2$s</string>
+    <string name="app_version_update_pending">Version %1$s · available: %2$s</string>
+    <string name="app_version_newer_than_release">Version %1$s (newer than latest release %2$s)</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_message">Version %1$s is on GitHub (you have %2$s).\n\nRelease: %3$s</string>
+    <string name="update_open_release">Open release page</string>
+    <string name="update_download_apk">Download APK</string>
+    <string name="update_later">Later</string>
     <string name="cast_stream_channel_name">Chromecast casting</string>
     <string name="cast_stream_notification_title">Casting active</string>
     <string name="cast_stream_notification_text">Local stream for Chromecast</string>

@@ -1,6 +1,7 @@
 package ro.yt.downloader
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -72,6 +73,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var terminalScroll: ScrollView
     private lateinit var terminalProgress: ProgressBar
     private lateinit var btnTerminalClose: Button
+    private lateinit var textAppVersion: TextView
+
+    @Volatile
+    private var githubReleaseCheckRunning = false
 
     private val openTreeLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -131,6 +136,7 @@ class MainActivity : AppCompatActivity() {
         terminalScroll = findViewById(R.id.terminalScroll)
         terminalProgress = findViewById(R.id.terminalProgress)
         btnTerminalClose = findViewById(R.id.btnTerminalClose)
+        textAppVersion = findViewById(R.id.textAppVersion)
 
         btnIconUpdate.setOnClickListener { startManualDependencyUpdate() }
         btnIconDonate.setOnClickListener {
@@ -193,6 +199,7 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             window.decorView.post { handleSendIntent(intent) }
         }
+        applyVersionLineFromCache()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -298,6 +305,8 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         refreshStreamUrlDisplay()
         syncLangButtonLabel()
+        applyVersionLineFromCache()
+        refreshReleaseInfoFromGitHub()
     }
 
     private fun refreshStreamUrlDisplay() {
@@ -317,6 +326,108 @@ class MainActivity : AppCompatActivity() {
         } else {
             getString(R.string.lang_button_ro)
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun installedVersionName(): String = try {
+        if (Build.VERSION.SDK_INT >= 33) {
+            packageManager.getPackageInfo(
+                packageName,
+                PackageManager.PackageInfoFlags.of(0)
+            ).versionName
+        } else {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        }
+    } catch (_: Exception) {
+        null
+    } ?: "?"
+
+    private fun applyVersionLineFromCache() {
+        applyVersionLine(installedVersionName(), UpdateCheckPrefs(this).getCachedRemoteVersion())
+    }
+
+    private fun applyVersionLine(installed: String, remote: String?) {
+        val dim = ContextCompat.getColor(this, R.color.steam_parchment_dim)
+        val brass = ContextCompat.getColor(this, R.color.steam_brass)
+        if (remote.isNullOrBlank()) {
+            textAppVersion.text = getString(R.string.app_version_line_base, installed)
+            textAppVersion.setTextColor(dim)
+            return
+        }
+        when (AppVersion.compare(installed, remote)) {
+            in Int.MIN_VALUE until 0 -> {
+                textAppVersion.text = getString(R.string.app_version_update_pending, installed, remote)
+                textAppVersion.setTextColor(brass)
+            }
+            0 -> {
+                textAppVersion.text = getString(R.string.app_version_with_latest, installed, remote)
+                textAppVersion.setTextColor(dim)
+            }
+            else -> {
+                textAppVersion.text = getString(R.string.app_version_newer_than_release, installed, remote)
+                textAppVersion.setTextColor(dim)
+            }
+        }
+    }
+
+    /** Verifică ultimul release pe GitHub (rate-limit: o dată la ~24 h). */
+    private fun refreshReleaseInfoFromGitHub() {
+        val prefs = UpdateCheckPrefs(this)
+        if (!prefs.shouldRunNetworkCheck()) return
+        if (githubReleaseCheckRunning) return
+        githubReleaseCheckRunning = true
+        Thread {
+            val result = GitHubLatestRelease.fetchLatest()
+            runOnUiThread {
+                try {
+                    if (isFinishing) return@runOnUiThread
+                    prefs.markNetworkCheckDone()
+                    result.fold(
+                        onSuccess = { info ->
+                            prefs.cacheRemoteRelease(info.versionCore, info.tagName)
+                            applyVersionLineFromCache()
+                            val installed = installedVersionName()
+                            if (AppVersion.compare(installed, info.versionCore) < 0 &&
+                                !UpdateCheckPrefs(this@MainActivity).isOfferDismissedForTag(info.tagName)
+                            ) {
+                                showUpdateAvailableDialog(info, installed)
+                            }
+                        },
+                        onFailure = { /* păstrăm ultimul cache; reîncercăm după interval */ }
+                    )
+                } finally {
+                    githubReleaseCheckRunning = false
+                }
+            }
+        }.start()
+    }
+
+    private fun showUpdateAvailableDialog(info: GitHubReleaseInfo, installed: String) {
+        val prefs = UpdateCheckPrefs(this)
+        val b = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.update_available_title)
+            .setMessage(
+                getString(
+                    R.string.update_available_message,
+                    info.versionCore,
+                    installed,
+                    info.tagName
+                )
+            )
+            .setPositiveButton(R.string.update_open_release) { _, _ ->
+                prefs.dismissOfferForTag(info.tagName)
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.htmlUrl)))
+            }
+            .setNegativeButton(R.string.update_later) { _, _ ->
+                prefs.dismissOfferForTag(info.tagName)
+            }
+        if (!info.apkBrowserDownloadUrl.isNullOrBlank()) {
+            b.setNeutralButton(R.string.update_download_apk) { _, _ ->
+                prefs.dismissOfferForTag(info.tagName)
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.apkBrowserDownloadUrl)))
+            }
+        }
+        b.show()
     }
 
     private fun appendTerminalLine(line: String) {
