@@ -21,10 +21,17 @@ private val FORMATS_VIDEO_TO_TRY = listOf(
 )
 
 private val FORMATS_AUDIO_TO_TRY = listOf(
+    "download/bestaudio/best",
+    "bestaudio[format_id=download]/bestaudio/best",
+    "bestaudio[ext=flac]/bestaudio[ext=wav]/bestaudio[ext=alac]/bestaudio/best",
     "bestaudio/best",
+    "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best",
+    "ba/b",
+    "bestaudio*",
     "bestaudio",
-    "ba",
+    "best[ext=mp4]/best[ext=webm]/best",
     "best",
+    "bv*+ba/b",
     "besteffort",
     "worst"
 )
@@ -218,6 +225,9 @@ object YtdlpDownload {
             if (attemptIndex == 0) {
                 addOption("--sleep-interval", "2")
                 addOption("--limit-rate", "5M")
+            }
+            if (attemptIndex == 0 && preset.formatSort != null) {
+                addOption("--format-sort", preset.formatSort)
             }
             if (isVideoPreset && preset.videoMergeMp4 && format !in listOf("best", "besteffort", "worst")) {
                 addOption("--merge-output-format", "mp4")

@@ -283,7 +283,7 @@ class MainActivity : AppCompatActivity() {
     private fun showQualityPickerForShare(url: String, isVideo: Boolean) {
         val labels = resources.getStringArray(R.array.format_preset_labels)
         val start = if (isVideo) 0 else 5
-        val end = if (isVideo) 4 else 9
+        val end = if (isVideo) 4 else 11
         val options = labels.slice(start..end).toTypedArray()
         MaterialAlertDialogBuilder(this)
             .setTitle(

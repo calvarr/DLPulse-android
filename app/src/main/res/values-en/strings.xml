@@ -155,11 +155,13 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
         <item>Video 720p</item>
         <item>Video 480p</item>
         <item>Video 360p</item>
+        <item>Audio only – best lossless (SoundCloud / FLAC / WAV / ALAC, native)</item>
+        <item>Audio only – best native (no re-encode)</item>
         <item>Audio only – MP3 320 kbps</item>
         <item>Audio only – MP3 192 kbps</item>
         <item>Audio only – MP3 128 kbps</item>
         <item>Audio only – M4A (AAC)</item>
-        <item>Audio only – OPUS</item>
+        <item>Audio only – OPUS (native WebM/Opus when offered)</item>
     </string-array>
 
     <string name="lang_button_ro">RO</string>

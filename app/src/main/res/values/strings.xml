@@ -155,11 +155,13 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
         <item>Video 720p</item>
         <item>Video 480p</item>
         <item>Video 360p</item>
+        <item>Doar audio – cel mai bun fără pierderi (SoundCloud / FLAC / WAV / ALAC, nativ)</item>
+        <item>Doar audio – cel mai bun nativ (fără re-encodare)</item>
         <item>Doar audio – MP3 320 kbps</item>
         <item>Doar audio – MP3 192 kbps</item>
         <item>Doar audio – MP3 128 kbps</item>
         <item>Doar audio – M4A (AAC)</item>
-        <item>Doar audio – OPUS</item>
+        <item>Doar audio – OPUS (WebM/Opus nativ când există)</item>
     </string-array>
 
     <string name="lang_button_ro">RO</string>
