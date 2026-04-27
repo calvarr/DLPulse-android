@@ -144,7 +144,38 @@
             android:background="@drawable/bg_panel_steampunk"
             android:padding="12dp"
             android:layout_marginTop="6dp"
-            android:layout_marginBottom="10dp" />
+            android:layout_marginBottom="6dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/main_search_source_label"
+            android:textSize="12sp"
+            android:textColor="@color/steam_parchment_dim" />
+
+        <RadioGroup
+            android:id="@+id/searchSourceGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="10dp">
+
+            <RadioButton
+                android:id="@+id/radioSearchYt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/main_search_youtube"
+                android:textColor="@color/steam_parchment" />
+
+            <RadioButton
+                android:id="@+id/radioSearchSc"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:text="@string/main_search_soundcloud"
+                android:textColor="@color/steam_parchment" />
+        </RadioGroup>
 
         <Button
             android:id="@+id/btnGo"

@@ -45,7 +45,10 @@
     <string name="lang_option_en">EN — engleză</string>
 
     <string name="main_url_label">URL sau căutare</string>
-    <string name="main_url_hint">https://… sau cuvinte</string>
+    <string name="main_url_hint">https://… sau cuvinte (YouTube / SoundCloud)</string>
+    <string name="main_search_source_label">Căutare după cuvinte — sursă:</string>
+    <string name="main_search_youtube">YouTube</string>
+    <string name="main_search_soundcloud">SoundCloud</string>
     <string name="main_search">Caută</string>
     <string name="main_switch_first_only">Doar primul videoclip (fără playlist întreg)</string>
     <string name="main_switch_hint">Dacă vezi lista de mai jos, alege melodii. Altfel folosește comutatorul.</string>

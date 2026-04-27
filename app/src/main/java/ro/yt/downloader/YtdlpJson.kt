@@ -22,11 +22,13 @@ data class SearchResultItem(
 
 object YtdlpJson {
 
-    private fun YoutubeDLRequest.addProbeOptions() {
+    private fun YoutubeDLRequest.addProbeOptions(url: String) {
         addOption("--no-warnings")
         addOption("-J")
         addOption("--skip-download")
-        addOption("--extractor-args", "youtube:player_client=android,web")
+        if (YoutubeUrl.isYouTubePage(url)) {
+            addOption("--extractor-args", "youtube:player_client=android,web")
+        }
         addOption("--sleep-interval", "2")
     }
 
@@ -37,7 +39,7 @@ object YtdlpJson {
         val targetUrl = YoutubeUrl.normalize(url)
         val response = runCatching {
             val req = YoutubeDLRequest(targetUrl).apply {
-                addProbeOptions()
+                addProbeOptions(targetUrl)
             }
             YoutubeDL.getInstance().execute(req)
         }.getOrElse { e ->
@@ -126,7 +128,41 @@ object YtdlpJson {
         if (root.optString("_type", "") != "playlist") {
             return Result.success(emptyList())
         }
-        return Result.success(parsePlaylistEntries(context, root))
+        return Result.success(parseFlatPlaylistEntries(context, root))
+    }
+
+    /**
+     * Căutare SoundCloud (``scsearchN:``), ca în ``yt_core.search_soundcloud``.
+     */
+    fun searchSoundcloud(context: Context, query: String, maxResults: Int = 12): Result<List<SearchResultItem>> {
+        val searchUrl = "scsearch$maxResults:${query.trim()}"
+        val response = runCatching {
+            val req = YoutubeDLRequest(searchUrl).apply {
+                addOption("--no-warnings")
+                addOption("-J")
+                addOption("--skip-download")
+                addOption("--flat-playlist")
+            }
+            YoutubeDL.getInstance().execute(req)
+        }.getOrElse { e -> return Result.failure(e) }
+
+        if (response.exitCode != 0) {
+            val err = response.err.takeIf { it.isNotBlank() } ?: response.out
+            return Result.failure(
+                IllegalStateException(
+                    err.ifBlank { context.getString(R.string.ytdlp_search_failed) }
+                )
+            )
+        }
+        val root = runCatching { JSONObject(response.out.trim()) }.getOrElse {
+            return Result.failure(
+                IllegalStateException(context.getString(R.string.ytdlp_invalid_json))
+            )
+        }
+        if (root.optString("_type", "") != "playlist") {
+            return Result.success(emptyList())
+        }
+        return Result.success(parseFlatPlaylistEntries(context, root))
     }
 
     /**
@@ -140,7 +176,9 @@ object YtdlpJson {
                 addOption("-J")
                 addOption("--skip-download")
                 addOption("--flat-playlist")
-                addOption("--extractor-args", "youtube:player_client=android,web")
+                if (YoutubeUrl.isYouTubePage(targetUrl)) {
+                    addOption("--extractor-args", "youtube:player_client=android,web")
+                }
                 addOption("--sleep-interval", "2")
             }
             YoutubeDL.getInstance().execute(req)
@@ -162,29 +200,57 @@ object YtdlpJson {
         if (root.optString("_type", "") != "playlist") {
             return Result.success(emptyList())
         }
-        return Result.success(parsePlaylistEntries(context, root))
+        return Result.success(parseFlatPlaylistEntries(context, root))
     }
 
-    private fun parsePlaylistEntries(context: Context, root: JSONObject): List<SearchResultItem> {
+    private fun thumbFromFlatEntry(e: JSONObject): String? {
+        val t = e.optString("thumbnail").trim()
+        if (t.isNotEmpty()) return t
+        val arr = e.optJSONArray("thumbnails") ?: return null
+        if (arr.length() == 0) return null
+        val last = arr.optJSONObject(arr.length() - 1) ?: return null
+        val u = last.optString("url").trim()
+        return u.ifBlank { null }
+    }
+
+    /**
+     * Intrări din playlist flat (YouTube, SoundCloud, …), ca ``_parse_search_entries`` din ``yt_core``.
+     */
+    private fun parseFlatPlaylistEntries(context: Context, root: JSONObject): List<SearchResultItem> {
         val entries = root.optJSONArray("entries") ?: return emptyList()
         val out = ArrayList<SearchResultItem>()
         val noTitle = context.getString(R.string.ytdlp_no_title)
         for (i in 0 until entries.length()) {
             val e = entries.optJSONObject(i) ?: continue
-            var vid = e.optString("id", "")
-            if (vid.isEmpty()) {
-                val u = e.optString("url", "")
-                vid = u.substringAfter("watch?v=").substringBefore("&").trim()
+            var pageUrl = e.optString("webpage_url").ifBlank { e.optString("url") }.trim()
+            if (pageUrl.isBlank()) {
+                val idOnly = e.optString("id", "").trim()
+                pageUrl = if (idOnly.length == 11 && !idOnly.startsWith("UC")) {
+                    "https://www.youtube.com/watch?v=$idOnly"
+                } else {
+                    ""
+                }
             }
-            if (vid.isEmpty()) continue
+            if (pageUrl.isBlank()) continue
+
+            val pageUrlNorm = if (YoutubeUrl.isYouTubePage(pageUrl)) {
+                YoutubeUrl.normalize(pageUrl)
+            } else {
+                pageUrl
+            }
+
+            val idStr = e.optString("id", "").ifBlank { pageUrlNorm }
             val title = e.optString("title").ifBlank { noTitle }
-            val pageUrl = e.optString("url").ifBlank { "https://www.youtube.com/watch?v=$vid" }
-            val isVideoId = vid.length == 11 && !vid.startsWith("UC")
-            var thumb = e.optString("thumbnail").takeIf { it.isNotBlank() }
-            if (thumb == null && isVideoId) {
-                thumb = "https://i.ytimg.com/vi/$vid/hqdefault.jpg"
+
+            var thumb = thumbFromFlatEntry(e)
+            if (thumb.isNullOrBlank()) {
+                val vid = idStr.trim()
+                val isYtVideoId = vid.length == 11 && !vid.startsWith("UC")
+                if (isYtVideoId && YoutubeUrl.isYouTubePage(pageUrlNorm)) {
+                    thumb = "https://i.ytimg.com/vi/$vid/hqdefault.jpg"
+                }
             }
-            out.add(SearchResultItem(vid, title, pageUrl, thumb))
+            out.add(SearchResultItem(idStr, title, pageUrlNorm, thumb))
         }
         return out
     }

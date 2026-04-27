@@ -13,13 +13,23 @@ object YtdlpPlayUrl {
     private const val YT_EXTRACTOR_FALLBACK = "youtube:player_client=tv_embedded"
 
     fun extractStreamUrlForPlayback(context: Context, pageUrl: String): Result<String> {
-        val url = YoutubeUrl.normalize(pageUrl)
-        val attempts = listOf(
-            Triple(YT_EXTRACTOR_PRIMARY, "best[ext=mp4]/best[ext=webm]/best", false),
-            Triple(YT_EXTRACTOR_PRIMARY, "18/best[height<=480]/worst", false),
-            Triple(YT_EXTRACTOR_FALLBACK, "best[ext=mp4]/best[ext=webm]/best", false),
-            Triple(YT_EXTRACTOR_FALLBACK, "18/best[height<=480]/worst", true)
-        )
+        val raw = pageUrl.trim()
+        val url = if (YoutubeUrl.isYouTubePage(raw)) YoutubeUrl.normalize(raw) else raw
+        val attempts: List<Triple<String?, String, Boolean>> =
+            if (YoutubeUrl.isYouTubePage(url)) {
+                listOf(
+                    Triple(YT_EXTRACTOR_PRIMARY, "best[ext=mp4]/best[ext=webm]/best", false),
+                    Triple(YT_EXTRACTOR_PRIMARY, "18/best[height<=480]/worst", false),
+                    Triple(YT_EXTRACTOR_FALLBACK, "best[ext=mp4]/best[ext=webm]/best", false),
+                    Triple(YT_EXTRACTOR_FALLBACK, "18/best[height<=480]/worst", true)
+                )
+            } else {
+                listOf(
+                    Triple(null, "bestaudio/best", false),
+                    Triple(null, "bestaudio*", true),
+                    Triple(null, "best/bestaudio", true)
+                )
+            }
         var lastError: Throwable? = null
         for ((extractor, format, allowFirstOfMany) in attempts) {
             val r = runExtractWithFormat(context, url, extractor, format, allowFirstOfMany)
@@ -34,7 +44,7 @@ object YtdlpPlayUrl {
     private fun runExtractWithFormat(
         context: Context,
         pageUrl: String,
-        extractorArgs: String,
+        extractorArgs: String?,
         formatSpec: String,
         allowFirstOfMany: Boolean
     ): Result<String> {
@@ -43,7 +53,9 @@ object YtdlpPlayUrl {
             addOption("--no-playlist")
             addOption("-f", formatSpec)
             addOption("-g")
-            addOption("--extractor-args", extractorArgs)
+            if (!extractorArgs.isNullOrBlank()) {
+                addOption("--extractor-args", extractorArgs)
+            }
         }
         val resp = runCatching { YoutubeDL.getInstance().execute(req) }.getOrElse { return Result.failure(it) }
         if (resp.exitCode != 0) {

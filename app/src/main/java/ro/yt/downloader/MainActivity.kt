@@ -18,6 +18,7 @@ import android.widget.ImageButton
 import android.widget.ScrollView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.RadioButton
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -695,7 +696,12 @@ class MainActivity : AppCompatActivity() {
         currentVideoUrl = null
         btnDownload.isEnabled = false
         Thread {
-            val res = YtdlpJson.searchYoutube(applicationContext, query)
+            val useSoundcloud = findViewById<RadioButton>(R.id.radioSearchSc).isChecked
+            val res = if (useSoundcloud) {
+                YtdlpJson.searchSoundcloud(applicationContext, query)
+            } else {
+                YtdlpJson.searchYoutube(applicationContext, query)
+            }
             runOnUiThread {
                 progressPrepare.visibility = View.GONE
                 btnGo.isEnabled = true

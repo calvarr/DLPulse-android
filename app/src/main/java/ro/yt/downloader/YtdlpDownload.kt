@@ -221,7 +221,9 @@ object YtdlpDownload {
             addOption("-f", format)
             addOption("-o", "${outputDir.absolutePath}/%(title)s.%(ext)s")
             if (noPlaylist) addOption("--no-playlist")
-            addOption("--extractor-args", youtubeExtractorArgs)
+            if (YoutubeUrl.isYouTubePage(url)) {
+                addOption("--extractor-args", youtubeExtractorArgs)
+            }
             if (attemptIndex == 0) {
                 addOption("--sleep-interval", "2")
                 addOption("--limit-rate", "5M")
@@ -264,7 +266,9 @@ object YtdlpDownload {
             addOption("-f", "besteffort")
             addOption("-o", "${outputDir.absolutePath}/%(title)s.%(ext)s")
             if (noPlaylist) addOption("--no-playlist")
-            addOption("--extractor-args", youtubeExtractorArgs)
+            if (YoutubeUrl.isYouTubePage(url)) {
+                addOption("--extractor-args", youtubeExtractorArgs)
+            }
             if (preset.audioExtract && preset.audioCodec != null) {
                 addOption("-x")
                 addOption("--audio-format", preset.audioCodec)
@@ -286,7 +290,9 @@ object YtdlpDownload {
             addOption("-f", "worst")
             addOption("-o", "${outputDir.absolutePath}/%(title)s.%(ext)s")
             if (noPlaylist) addOption("--no-playlist")
-            addOption("--extractor-args", youtubeExtractorArgs)
+            if (YoutubeUrl.isYouTubePage(url)) {
+                addOption("--extractor-args", youtubeExtractorArgs)
+            }
             if (preset.audioExtract && preset.audioCodec != null) {
                 addOption("-x")
                 addOption("--audio-format", preset.audioCodec)

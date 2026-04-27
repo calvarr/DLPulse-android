@@ -45,7 +45,10 @@
     <string name="lang_option_en">EN — English</string>
 
     <string name="main_url_label">URL or search</string>
-    <string name="main_url_hint">https://… or keywords</string>
+    <string name="main_url_hint">https://… or keywords (YouTube / SoundCloud)</string>
+    <string name="main_search_source_label">Keyword search — source:</string>
+    <string name="main_search_youtube">YouTube</string>
+    <string name="main_search_soundcloud">SoundCloud</string>
     <string name="main_search">Search</string>
     <string name="main_switch_first_only">First video only (not whole playlist)</string>
     <string name="main_switch_hint">If you see the list below, pick tracks. Otherwise use the switch.</string>
