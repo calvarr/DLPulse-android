@@ -123,6 +123,7 @@ object YtdlpDownload {
         }
         val preset = YtdlpPresets.ALL[presetIndex]
         val isVideoPreset = YtdlpPresets.isVideoPresetIndex(presetIndex)
+        val forceMp3ForYoutubeNativeAudio = (presetIndex == 5 || presetIndex == 6) && YoutubeUrl.isYouTubePage(url)
         val formatsToTry = buildFormatsToTry(preset.formatSpec, isVideoPreset)
 
         val before = outputDir.listFiles()?.filter { it.isFile }?.map { it.name to it.length() }?.toSet() ?: emptySet()
@@ -131,7 +132,7 @@ object YtdlpDownload {
         for ((i, fmt) in formatsToTry.withIndex()) {
             val req = buildRequest(
                 url, outputDir, fmt, preset, i, noPlaylist, isVideoPreset,
-                youtubeExtractorArgs
+                youtubeExtractorArgs, forceMp3ForYoutubeNativeAudio
             )
             val response = runCatching {
                 if (onProgress != null) {
@@ -194,14 +195,15 @@ object YtdlpDownload {
         attemptIndex: Int,
         noPlaylist: Boolean,
         isVideoPreset: Boolean,
-        youtubeExtractorArgs: String
+        youtubeExtractorArgs: String,
+        forceMp3ForYoutubeNativeAudio: Boolean
     ): YoutubeDLRequest {
         return when (format) {
-            "besteffort" -> requestBestEffort(url, outputDir, preset, noPlaylist, youtubeExtractorArgs)
-            "worst" -> requestWorst(url, outputDir, preset, noPlaylist, youtubeExtractorArgs)
+            "besteffort" -> requestBestEffort(url, outputDir, preset, noPlaylist, youtubeExtractorArgs, forceMp3ForYoutubeNativeAudio)
+            "worst" -> requestWorst(url, outputDir, preset, noPlaylist, youtubeExtractorArgs, forceMp3ForYoutubeNativeAudio)
             else -> requestNormal(
                 url, outputDir, format, preset, attemptIndex, noPlaylist, isVideoPreset,
-                youtubeExtractorArgs
+                youtubeExtractorArgs, forceMp3ForYoutubeNativeAudio
             )
         }
     }
@@ -214,7 +216,8 @@ object YtdlpDownload {
         attemptIndex: Int,
         noPlaylist: Boolean,
         isVideoPreset: Boolean,
-        youtubeExtractorArgs: String
+        youtubeExtractorArgs: String,
+        forceMp3ForYoutubeNativeAudio: Boolean
     ): YoutubeDLRequest {
         return YoutubeDLRequest(url).apply {
             addOption("--no-warnings")
@@ -240,16 +243,25 @@ object YtdlpDownload {
                     addOption("--audio-format", preset.audioCodec)
                     addOption("--audio-quality", preset.audioQuality ?: "0")
                 }
+                forceMp3ForYoutubeNativeAudio -> {
+                    addOption("-x")
+                    addOption("--audio-format", "mp3")
+                    addOption("--audio-quality", "0")
+                }
             }
-            applyEmbedMetadataForAudio(preset)
+            applyEmbedMetadataForAudio(preset, forceMp3ForYoutubeNativeAudio)
         }
     }
 
     /**
      * Metadate + copertă în fișier (ID3/APIC pentru MP3 etc.), dacă suportă yt-dlp/ffmpeg.
      */
-    private fun YoutubeDLRequest.applyEmbedMetadataForAudio(preset: FormatPreset) {
-        if (!preset.audioExtract || preset.rawAudioNoExtract) return
+    private fun YoutubeDLRequest.applyEmbedMetadataForAudio(
+        preset: FormatPreset,
+        forceMp3ForYoutubeNativeAudio: Boolean = false
+    ) {
+        val shouldEmbed = (preset.audioExtract && !preset.rawAudioNoExtract) || forceMp3ForYoutubeNativeAudio
+        if (!shouldEmbed) return
         addOption("--embed-metadata")
         addOption("--embed-thumbnail")
     }
@@ -259,7 +271,8 @@ object YtdlpDownload {
         outputDir: File,
         preset: FormatPreset,
         noPlaylist: Boolean,
-        youtubeExtractorArgs: String
+        youtubeExtractorArgs: String,
+        forceMp3ForYoutubeNativeAudio: Boolean
     ): YoutubeDLRequest {
         return YoutubeDLRequest(url).apply {
             addOption("--no-warnings")
@@ -273,8 +286,12 @@ object YtdlpDownload {
                 addOption("-x")
                 addOption("--audio-format", preset.audioCodec)
                 addOption("--audio-quality", preset.audioQuality ?: "0")
+            } else if (forceMp3ForYoutubeNativeAudio) {
+                addOption("-x")
+                addOption("--audio-format", "mp3")
+                addOption("--audio-quality", "0")
             }
-            applyEmbedMetadataForAudio(preset)
+            applyEmbedMetadataForAudio(preset, forceMp3ForYoutubeNativeAudio)
         }
     }
 
@@ -283,7 +300,8 @@ object YtdlpDownload {
         outputDir: File,
         preset: FormatPreset,
         noPlaylist: Boolean,
-        youtubeExtractorArgs: String
+        youtubeExtractorArgs: String,
+        forceMp3ForYoutubeNativeAudio: Boolean
     ): YoutubeDLRequest {
         return YoutubeDLRequest(url).apply {
             addOption("--no-warnings")
@@ -297,8 +315,12 @@ object YtdlpDownload {
                 addOption("-x")
                 addOption("--audio-format", preset.audioCodec)
                 addOption("--audio-quality", preset.audioQuality ?: "0")
+            } else if (forceMp3ForYoutubeNativeAudio) {
+                addOption("-x")
+                addOption("--audio-format", "mp3")
+                addOption("--audio-quality", "0")
             }
-            applyEmbedMetadataForAudio(preset)
+            applyEmbedMetadataForAudio(preset, forceMp3ForYoutubeNativeAudio)
         }
     }
 }
