@@ -64,11 +64,11 @@
     <string name="main_terminal_subtitle">Command output appears below (terminal style).</string>
     <string name="main_close">Close</string>
 
-    <string name="main_app_tagline">App for downloading video/audio from YouTube, playback, sharing files, and local streaming (Chromecast).</string>
+    <string name="main_app_tagline">Educational tool: yt-dlp/ffmpeg on device for personal media library, playback, and local streaming (Chromecast).</string>
     <string name="cd_sites_note">Note: links, sharing, supported sites</string>
 
     <string name="main_sites_note_title">Note — links &amp; sites</string>
-    <string name="main_sites_note_intro">You can use links from other sites (not only YouTube) in two ways:\n\n• Paste the address into the “URL or search” field below, then tap “Search”.\n\n• From a browser or the YouTube app (or another app), use “Share” and pick DLPulse — this app opens and you can download video or audio (pick quality) or only analyze the link.\n\nTechnically, downloads use yt-dlp (see below).</string>
+    <string name="main_sites_note_intro">For study and personal offline use, paste a public page URL supported by yt-dlp into “URL or search”, then tap “Search”.\n\nYou can also Share a link from another app to open DLPulse — inspect formats, save locally, or analyze only.\n\nTechnically, the app wraps yt-dlp and ffmpeg (see Credits). You must comply with copyright and each site’s terms of service.</string>
 
     <string name="main_sites_info_body"><![CDATA[DLPulse Android project page (source & official releases):
 https://github.com/calvarr/DLPulse-android
@@ -99,7 +99,7 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="main_stream_url_unavailable">— (connect to Wi‑Fi to see your LAN address)</string>
 
     <string name="main_credits_title">Thanks to open source projects</string>
-    <string name="main_credits_body">This app builds on open‑source software. Thank you to the authors and contributors of:\n\n• yt‑dlp — https://github.com/yt-dlp/yt-dlp\n• FFmpeg — https://ffmpeg.org\n• youtubedl‑android — https://github.com/yausername/youtubedl-android (maintained packages used by this app)\n• NanoHTTPD — https://github.com/NanoHttpd/nanohttpd\n• Android Jetpack (AndroidX), Material Components\n• Media3 (ExoPlayer) — https://developer.android.com/jetpack/androidx/releases/media3\n• Google Cast SDK for Android\n• Coil — https://github.com/coil-kt/coil\n• Kotlin — https://kotlinlang.org\n\n… and all other libraries bundled with the app.</string>
+    <string name="main_credits_body">This app builds on open‑source software. Thank you to the authors and contributors of:\n\n• yt‑dlp — https://github.com/yt-dlp/yt-dlp\n• FFmpeg — https://ffmpeg.org\n• youtubedl‑android — https://github.com/yausername/youtubedl-android (maintained packages used by this app)\n• NanoHTTPD — https://github.com/NanoHttpd/nanohttpd\n• Android Jetpack (AndroidX), Material Components\n• Media3 (ExoPlayer) — https://developer.android.com/jetpack/androidx/releases/media3\n• Google Cast SDK for Android\n• Coil — https://github.com/coil-kt/coil\n• Kotlin — https://kotlinlang.org\n\n… and all other libraries bundled with the app.\n\n——— Legal notice ———\n\nDLPulse is for educational use and personal media library management. It wraps yt-dlp/ffmpeg; the author does not host copyrighted media. You must comply with copyright laws and platform terms of service; personal offline use only; provided as-is without warranty. Not affiliated with YouTube, SoundCloud, or Google. Do not use if you disagree.</string>
 
     <string name="main_dialog_save_title">Where should we save files?</string>
     <string name="main_save_public">Public downloads (DLPulse folder)</string>

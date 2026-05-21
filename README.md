@@ -1,6 +1,12 @@
 # DLPulse (Android)
 
-**DLPulse** is an Android app that runs **yt-dlp on your device**—no custom server. Paste a YouTube URL, pick video or audio formats, and download to app storage; search videos, **play streams in the built-in player** (ExoPlayer), browse your files, and **cast to Chromecast / Google Cast** when supported.
+## Legal notice
+
+**DLPulse** is open-source software for educational purposes, technical research, and personal media library management. It wraps yt-dlp/ffmpeg; the author does not host copyrighted media. You must comply with copyright laws and platform terms of service; personal offline use only; provided as-is without warranty. Not affiliated with YouTube, SoundCloud, or Google LLC. Full text: [LEGAL.md](../LEGAL.md).
+
+---
+
+**DLPulse** is an Android app for **study and personal offline libraries** — it runs **yt-dlp** and **ffmpeg on your device** (no custom server). Paste a supported public page URL, inspect formats, save locally for your own use, search when extractors allow, **play in the built-in player** (ExoPlayer), browse files, and **cast to Chromecast / Google Cast** when supported.
 
 **Package ID (unchanged for update compatibility):** `ro.yt.downloader`  
 **Display name:** DLPulse
@@ -50,9 +56,9 @@ Această variantă Android folosește `yt-dlp` direct în aplicație (fără bac
 
 ## Ce face aplicatia
 
-- primeste URL YouTube complet
-- permite alegerea formatului (video/audio)
-- descarca local pe telefon in folderul aplicatiei:
+- primeste URL public suportat de yt-dlp (pentru studiu / arhiva personala)
+- permite alegerea formatului (video/audio) via yt-dlp/ffmpeg
+- salveaza local pe telefon in folderul aplicatiei:
   `Android/data/ro.yt.downloader/files/downloads`
 
 ## Cerinte
@@ -84,14 +90,15 @@ Această variantă Android folosește `yt-dlp` direct în aplicație (fără bac
 
 ## Utilizare
 
-1. Introdu URL complet YouTube (`https://www.youtube.com/watch?v=...`).
+1. Introdu un URL public suportat de yt-dlp (ex. pagina media).
 2. Apasa `Verifica URL`.
 3. Alege formatul.
-4. Apasa `Descarca local`.
+4. Apasa `Descarca local` (doar pentru uz personal / offline).
 
 ## Observatii
 
-- Pentru anumite clipuri YouTube pot exista blocari anti-bot in functie de retea/dispozitiv.
+- Respecta legile privind drepturile de autor si termenii site-urilor folosite.
+- Pe unele surse pot exista blocari anti-bot in functie de retea/dispozitiv.
 - **Prima deschidere** poate dura: aplicatia **actualizeaza binarele yt-dlp** (necesita **internet**).
 - Daca vezi eroare la init, reinstaleaza ultimul APK si verifica spatiu liber pe telefon.
 
