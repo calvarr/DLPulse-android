@@ -17,7 +17,8 @@ data class SearchResultItem(
     val id: String,
     val title: String,
     val url: String,
-    val thumbnail: String?
+    val thumbnail: String?,
+    val durationSeconds: Long? = null
 )
 
 object YtdlpJson {
@@ -99,7 +100,7 @@ object YtdlpJson {
     /**
      * Căutare YouTube, ca /api/search (ytsearch12).
      */
-    fun searchYoutube(context: Context, query: String, maxResults: Int = 12): Result<List<SearchResultItem>> {
+    fun searchYoutube(context: Context, query: String, maxResults: Int = 40): Result<List<SearchResultItem>> {
         val searchUrl = "ytsearch$maxResults:$query"
         val response = runCatching {
             val req = YoutubeDLRequest(searchUrl).apply {
@@ -134,7 +135,7 @@ object YtdlpJson {
     /**
      * Căutare SoundCloud (``scsearchN:``), ca în ``yt_core.search_soundcloud``.
      */
-    fun searchSoundcloud(context: Context, query: String, maxResults: Int = 12): Result<List<SearchResultItem>> {
+    fun searchSoundcloud(context: Context, query: String, maxResults: Int = 40): Result<List<SearchResultItem>> {
         val searchUrl = "scsearch$maxResults:${query.trim()}"
         val response = runCatching {
             val req = YoutubeDLRequest(searchUrl).apply {
@@ -203,6 +204,23 @@ object YtdlpJson {
         return Result.success(parseFlatPlaylistEntries(context, root))
     }
 
+    private fun durationFromFlatEntry(e: JSONObject): Long? {
+        if (e.has("duration") && !e.isNull("duration")) {
+            val d = e.optDouble("duration", Double.NaN)
+            if (!d.isNaN() && d > 0) return d.toLong()
+        }
+        val ds = e.optString("duration_string").trim()
+        if (ds.isNotEmpty()) {
+            val parts = ds.split(":").mapNotNull { it.trim().toLongOrNull() }
+            if (parts.isNotEmpty()) {
+                var total = 0L
+                for (p in parts) total = total * 60 + p
+                if (total > 0) return total
+            }
+        }
+        return null
+    }
+
     private fun thumbFromFlatEntry(e: JSONObject): String? {
         val t = e.optString("thumbnail").trim()
         if (t.isNotEmpty()) return t
@@ -250,7 +268,8 @@ object YtdlpJson {
                     thumb = "https://i.ytimg.com/vi/$vid/hqdefault.jpg"
                 }
             }
-            out.add(SearchResultItem(idStr, title, pageUrlNorm, thumb))
+            val durationSeconds = durationFromFlatEntry(e)
+            out.add(SearchResultItem(idStr, title, pageUrlNorm, thumb, durationSeconds))
         }
         return out
     }

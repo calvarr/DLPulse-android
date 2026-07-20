@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
@@ -14,13 +16,35 @@
         android:layout_height="wrap_content"
         android:buttonTint="@color/steam_brass" />
 
-    <ImageView
-        android:id="@+id/thumbnail"
+    <FrameLayout
         android:layout_width="80dp"
-        android:layout_height="45dp"
-        android:scaleType="centerCrop"
-        android:contentDescription="@null"
-        android:background="#1A1510" />
+        android:layout_height="45dp">
+
+        <ImageView
+            android:id="@+id/thumbnail"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:contentDescription="@null"
+            android:background="#1A1510" />
+
+        <TextView
+            android:id="@+id/duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="3dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:paddingTop="1dp"
+            android:paddingBottom="1dp"
+            android:background="@drawable/bg_duration_badge"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:ignore="RtlSymmetry" />
+    </FrameLayout>
 
     <TextView
         android:id="@+id/title"
@@ -28,17 +52,18 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:layout_marginStart="8dp"
-        android:maxLines="2"
+        android:ellipsize="none"
         android:textSize="14sp"
         android:textColor="@color/steam_parchment" />
 
-    <Button
+    <ImageButton
         android:id="@+id/btnPlay"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/search_play_in_app"
-        android:textSize="12sp"
-        android:minHeight="44dp"
-        android:backgroundTint="@color/steam_brass"
-        android:textColor="@color/steam_parchment" />
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginStart="4dp"
+        android:src="@drawable/ic_action_play"
+        android:scaleType="centerInside"
+        android:background="@drawable/bg_icon_button_steampunk"
+        android:contentDescription="@string/search_play_in_app"
+        app:tint="@color/steam_brass" />
 </LinearLayout>
