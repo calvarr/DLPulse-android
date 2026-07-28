@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.net.wifi.WifiManager
@@ -30,6 +31,7 @@ import android.widget.Toast
 import android.provider.DocumentsContract
 import java.io.File
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
@@ -159,6 +161,17 @@ class PublicDownloadsActivity : AppCompatActivity() {
         }
         browsePrefs.setSafTreeUri(uri)
         enterSafMode(uri)
+    }
+
+    private val mediaDeleteConsentLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            reloadFromDisk(clearSelection = false)
+            Toast.makeText(this, R.string.browse_delete_done, Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, R.string.browse_delete_failed, Toast.LENGTH_LONG).show()
+        }
     }
 
     private val castSessionListener = object : SessionManagerListener<CastSession> {
@@ -1041,6 +1054,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
         }
         popup.menu.findItem(R.id.action_rename_file)?.isVisible =
             browseLocation != BrowseLocation.SAF_LIBRARY
+        popup.menu.findItem(R.id.action_move_file)?.isVisible = true
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_play_file -> {
@@ -1057,6 +1071,10 @@ class PublicDownloadsActivity : AppCompatActivity() {
                 }
                 R.id.action_rename_file -> {
                     showRenameFileDialog(entry)
+                    true
+                }
+                R.id.action_move_file -> {
+                    showMoveFileDialog(entry)
                     true
                 }
                 R.id.action_delete_file -> {
@@ -1108,11 +1126,106 @@ class PublicDownloadsActivity : AppCompatActivity() {
             .setTitle(R.string.browse_delete_confirm_title)
             .setMessage(getString(R.string.browse_delete_confirm_message, entry.title))
             .setPositiveButton(R.string.browse_delete) { _, _ ->
-                if (DownloadFileModify.delete(this, entry)) {
+                when (val outcome = DownloadFileModify.delete(this, entry)) {
+                    is DownloadFileModify.DeleteOutcome.Success -> {
+                        reloadFromDisk(clearSelection = false)
+                        Toast.makeText(this, R.string.browse_delete_done, Toast.LENGTH_SHORT).show()
+                    }
+                    is DownloadFileModify.DeleteOutcome.NeedsUserConsent -> {
+                        requestMediaDeleteConsent(outcome.intentSender)
+                    }
+                    is DownloadFileModify.DeleteOutcome.Failed -> {
+                        Toast.makeText(this, R.string.browse_delete_failed, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            .setNegativeButton(R.string.main_cancel, null)
+            .show()
+    }
+
+    private fun requestMediaDeleteConsent(sender: IntentSender) {
+        runCatching {
+            mediaDeleteConsentLauncher.launch(IntentSenderRequest.Builder(sender).build())
+        }.onFailure {
+            Toast.makeText(this, R.string.browse_delete_failed, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun showMoveFileDialog(entry: DownloadedFileEntry) {
+        when (browseLocation) {
+            BrowseLocation.DLPULSE -> showMoveDlpulseDialog(entry)
+            BrowseLocation.SAF_LIBRARY -> showMoveSafDialog(entry)
+        }
+    }
+
+    private fun showMoveDlpulseDialog(entry: DownloadedFileEntry) {
+        val currentRel = entry.file?.parentFile?.let { parent ->
+            val base = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                "DLPulse"
+            )
+            val p = runCatching { parent.canonicalPath }.getOrNull() ?: return@let browseRelativePath
+            val b = runCatching { base.canonicalPath }.getOrNull() ?: return@let browseRelativePath
+            when {
+                p == b -> ""
+                p.startsWith("$b/") -> p.removePrefix("$b/")
+                else -> browseRelativePath
+            }
+        } ?: browseRelativePath
+
+        val destinations = DownloadsIndex.listAllDlpulseFolderPaths()
+            .filter { it != currentRel }
+        if (destinations.isEmpty()) {
+            Toast.makeText(this, R.string.browse_move_no_dest, Toast.LENGTH_LONG).show()
+            return
+        }
+        val labels = destinations.map { rel ->
+            if (rel.isEmpty()) getString(R.string.browse_move_root)
+            else rel.replace("/", " › ")
+        }.toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.browse_move_title)
+            .setItems(labels) { _, which ->
+                val dest = destinations[which]
+                if (DownloadFileModify.moveToDlpulseSubfolder(this, entry, dest)) {
                     reloadFromDisk(clearSelection = false)
-                    Toast.makeText(this, R.string.browse_delete_done, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.browse_move_done, Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this, R.string.browse_delete_failed, Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, R.string.browse_move_failed, Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton(R.string.main_cancel, null)
+            .show()
+    }
+
+    private fun showMoveSafDialog(entry: DownloadedFileEntry) {
+        val tree = safTreeUri ?: browsePrefs.getSafTreeUri()
+        if (tree == null) {
+            Toast.makeText(this, R.string.browse_move_failed, Toast.LENGTH_LONG).show()
+            return
+        }
+        val destinations = SafDirectoryListing.listMoveDestinations(
+            this,
+            tree,
+            safPathSegments.toList()
+        )
+        if (destinations.isEmpty()) {
+            Toast.makeText(this, R.string.browse_move_no_dest, Toast.LENGTH_LONG).show()
+            return
+        }
+        val labels = destinations.map { segs ->
+            if (segs.isEmpty()) getString(R.string.browse_move_saf_root)
+            else segs.joinToString(" › ")
+        }.toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.browse_move_title)
+            .setItems(labels) { _, which ->
+                val dest = destinations[which]
+                if (SafDirectoryListing.moveFile(this, tree, entry, dest)) {
+                    reloadFromDisk(clearSelection = false)
+                    Toast.makeText(this, R.string.browse_move_done, Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, R.string.browse_move_failed, Toast.LENGTH_LONG).show()
                 }
             }
             .setNegativeButton(R.string.main_cancel, null)
@@ -1142,6 +1255,12 @@ class PublicDownloadsActivity : AppCompatActivity() {
             item.setTitle("")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 item.contentDescription = getString(R.string.cd_menu_rename_file)
+            }
+        }
+        menu.findItem(R.id.action_move_file)?.let { item ->
+            item.setTitle("")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                item.contentDescription = getString(R.string.cd_menu_move_file)
             }
         }
         menu.findItem(R.id.action_delete_file)?.let { item ->

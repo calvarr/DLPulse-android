@@ -30,21 +30,7 @@ object DownloadsIndex {
             "${name.lowercase(Locale.ROOT)}_$size"
 
         fun putMerged(key: String, entry: DownloadedFileEntry) {
-            val existing = byKey[key]
-            if (existing == null) {
-                byKey[key] = entry
-                return
-            }
-            if (existing.file == null && entry.file != null) {
-                byKey[key] = entry
-                return
-            }
-            if (existing.file != null && entry.file == null) {
-                return
-            }
-            if (entry.sortKey > existing.sortKey) {
-                byKey[key] = entry
-            }
+            byKey[key] = mergeEntries(byKey[key], entry)
         }
 
         scanPublicFolderToMap(byKey, ::dedupeKey, ::putMerged)
@@ -67,21 +53,50 @@ object DownloadsIndex {
             SUBFOLDER
         )
         if (!dir.isDirectory) return
-        dir.listFiles()?.forEach { f ->
-            if (f.isFile && f.canRead() && f.length() > 0L) {
-                val key = dedupeKey(f.name, f.length())
-                putMerged(
-                    key,
-                    DownloadedFileEntry(
-                        title = f.name,
-                        mime = DownloadMime.guessFromFileName(f.name),
-                        file = f,
-                        contentUri = null,
-                        sortKey = f.lastModified()
-                    )
-                )
+        fun walk(d: File) {
+            d.listFiles()?.forEach { f ->
+                when {
+                    f.isDirectory && !f.name.startsWith(".") -> walk(f)
+                    f.isFile && f.canRead() && f.length() > 0L -> {
+                        val key = dedupeKey(f.name, f.length())
+                        putMerged(
+                            key,
+                            DownloadedFileEntry(
+                                title = f.name,
+                                mime = DownloadMime.guessFromFileName(f.name),
+                                file = f,
+                                contentUri = null,
+                                sortKey = f.lastModified(),
+                                sizeBytes = f.length()
+                            )
+                        )
+                    }
+                }
             }
         }
+        walk(dir)
+    }
+
+    /** Unește File + contentUri ca ștergerea MediaStore să meargă pe Android 10+. */
+    private fun mergeEntries(
+        existing: DownloadedFileEntry?,
+        entry: DownloadedFileEntry
+    ): DownloadedFileEntry {
+        if (existing == null) return entry
+        val preferNewer = entry.sortKey > existing.sortKey
+        val base = when {
+            existing.file == null && entry.file != null -> entry
+            existing.file != null && entry.file == null -> existing
+            preferNewer -> entry
+            else -> existing
+        }
+        val size = maxOf(existing.effectiveSizeForDedupe(), entry.effectiveSizeForDedupe())
+        return base.copy(
+            file = existing.file ?: entry.file,
+            contentUri = existing.contentUri ?: entry.contentUri,
+            sizeBytes = if (size > 0L) size else base.sizeBytes,
+            sortKey = maxOf(existing.sortKey, entry.sortKey)
+        )
     }
 
     private fun queryDownloadsCollection(
@@ -347,17 +362,7 @@ object DownloadsIndex {
         val byKey = LinkedHashMap<String, DownloadedFileEntry>()
         fun putMerged(e: DownloadedFileEntry) {
             val k = "${e.title.lowercase(Locale.ROOT)}_${e.effectiveSizeForDedupe()}"
-            val existing = byKey[k]
-            if (existing == null) {
-                byKey[k] = e
-                return
-            }
-            if (existing.file == null && e.file != null) {
-                byKey[k] = e
-                return
-            }
-            if (existing.file != null && e.file == null) return
-            if (e.sortKey > existing.sortKey) byKey[k] = e
+            byKey[k] = mergeEntries(byKey[k], e)
         }
         diskFiles.forEach { putMerged(it) }
 
@@ -473,6 +478,30 @@ object DownloadsIndex {
             if (normalized == cn) return true
         }
         return false
+    }
+
+    /**
+     * Toate căile relative de foldere sub Download/DLPulse (inclusiv `""` = rădăcină).
+     */
+    fun listAllDlpulseFolderPaths(): List<String> {
+        val baseDir = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            SUBFOLDER
+        )
+        val out = linkedSetOf("")
+        if (!baseDir.isDirectory) return out.toList()
+        fun walk(dir: File, rel: String) {
+            dir.listFiles()
+                ?.filter { it.isDirectory && !it.name.startsWith(".") }
+                ?.sortedBy { it.name.lowercase(Locale.ROOT) }
+                ?.forEach { child ->
+                    val childRel = if (rel.isEmpty()) child.name else "$rel/${child.name}"
+                    out.add(childRel)
+                    walk(child, childRel)
+                }
+        }
+        walk(baseDir, "")
+        return out.toList()
     }
 
     /**

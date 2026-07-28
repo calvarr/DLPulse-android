@@ -55,6 +55,69 @@ object SafDirectoryListing {
         return parent.createDirectory(safe) != null
     }
 
+    /** Mută un fișier (DocumentFile) în folderul țintă sub [destPathSegments]. */
+    fun moveFile(
+        context: Context,
+        treeUri: Uri,
+        entry: DownloadedFileEntry,
+        destPathSegments: List<String>
+    ): Boolean {
+        val uri = entry.contentUri ?: return false
+        val destDir = resolveDirectory(context, treeUri, destPathSegments) ?: return false
+        if (destDir.findFile(entry.title) != null) return false
+        val source = DocumentFile.fromSingleUri(context, uri) ?: return false
+        if (!source.exists() || source.isDirectory) return false
+
+        val parent = source.parentFile
+        if (parent != null) {
+            val moved = runCatching {
+                android.provider.DocumentsContract.moveDocument(
+                    context.contentResolver,
+                    uri,
+                    parent.uri,
+                    destDir.uri
+                )
+            }.getOrNull()
+            if (moved != null) return true
+        }
+
+        val mime = entry.mime.ifBlank { "application/octet-stream" }
+        val created = destDir.createFile(mime, entry.title) ?: return false
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { inp ->
+                context.contentResolver.openOutputStream(created.uri)?.use { out ->
+                    inp.copyTo(out)
+                } ?: return false
+            } ?: return false
+            source.delete()
+        } catch (_: Exception) {
+            runCatching { created.delete() }
+            false
+        }
+    }
+
+    /** Listează folderele din tree (cale relativă ca listă de segmente), fără [currentPath]. */
+    fun listMoveDestinations(
+        context: Context,
+        treeUri: Uri,
+        currentPath: List<String>
+    ): List<List<String>> {
+        val root = DocumentFile.fromTreeUri(context, treeUri) ?: return emptyList()
+        val out = linkedSetOf<List<String>>()
+        out.add(emptyList())
+        fun walk(dir: DocumentFile, rel: List<String>) {
+            for (child in dir.listFiles()) {
+                val name = child.name ?: continue
+                if (!child.isDirectory || name.startsWith(".")) continue
+                val childRel = rel + name
+                out.add(childRel)
+                if (childRel.size < 6) walk(child, childRel)
+            }
+        }
+        walk(root, emptyList())
+        return out.filter { it != currentPath }
+    }
+
     private fun resolveDirectory(context: Context, treeUri: Uri, pathSegments: List<String>): DocumentFile? {
         var dir = DocumentFile.fromTreeUri(context, treeUri) ?: return null
         for (seg in pathSegments) {
