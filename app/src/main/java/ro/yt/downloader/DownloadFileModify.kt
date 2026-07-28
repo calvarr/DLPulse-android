@@ -26,93 +26,172 @@ object DownloadFileModify {
         data class NeedsUserConsent(val intentSender: IntentSender) : DeleteOutcome()
     }
 
-    fun rename(context: Context, entry: DownloadedFileEntry, newName: String): Boolean {
-        val safe = sanitizeNewFileName(newName) ?: return false
-        if (safe == entry.title) return true
+    sealed class MoveOutcome {
+        data object Success : MoveOutcome()
+        data object Failed : MoveOutcome()
+        data class NeedsUserConsent(val intentSender: IntentSender) : MoveOutcome()
+    }
+
+    sealed class RenameOutcome {
+        data object Success : RenameOutcome()
+        data object Failed : RenameOutcome()
+        data class NeedsUserConsent(val intentSender: IntentSender) : RenameOutcome()
+    }
+
+    fun rename(context: Context, entry: DownloadedFileEntry, newName: String): RenameOutcome {
+        val safe = sanitizeNewFileName(newName) ?: return RenameOutcome.Failed
+        if (safe == entry.title) return RenameOutcome.Success
+
+        val uri = resolveMediaUri(context, entry)
+
+        // Pe Android 10+ redenumirea MediaStore e calea corectă pentru fișiere publice.
+        if (uri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            when (val r = renameMediaStoreOutcome(context, uri, safe)) {
+                is RenameOutcome.Success -> {
+                    entry.file?.let { f ->
+                        if (f.exists()) {
+                            val dest = File(f.parentFile ?: return@let, safe)
+                            if (!dest.exists()) runCatching { f.renameTo(dest) }
+                            scanPath(context, dest.absolutePath)
+                        }
+                    }
+                    return RenameOutcome.Success
+                }
+                is RenameOutcome.NeedsUserConsent -> return r
+                is RenameOutcome.Failed -> Unit
+            }
+        }
 
         entry.file?.let { f ->
-            if (!f.exists()) return false
-            val parent = f.parentFile ?: return false
+            if (!f.exists()) return RenameOutcome.Failed
+            val parent = f.parentFile ?: return RenameOutcome.Failed
             val dest = File(parent, safe)
-            if (dest.exists()) return false
-            if (!f.renameTo(dest)) return false
-            scanPath(context, dest.absolutePath)
-            entry.contentUri?.let { uri ->
-                runCatching {
-                    val values = ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, safe)
-                    }
-                    context.contentResolver.update(uri, values, null, null)
+            if (dest.exists()) return RenameOutcome.Failed
+            if (f.renameTo(dest)) {
+                scanPath(context, dest.absolutePath)
+                return RenameOutcome.Success
+            }
+            if (isAppPrivateFile(context, f)) return RenameOutcome.Failed
+            if (uri != null) {
+                createWriteRequestSender(context, listOf(uri))?.let {
+                    return RenameOutcome.NeedsUserConsent(it)
                 }
             }
-            return true
+            return RenameOutcome.Failed
         }
 
-        entry.contentUri?.let { uri ->
-            return renameMediaStore(context, uri, safe)
+        if (uri != null) {
+            return renameMediaStoreOutcome(context, uri, safe)
         }
 
-        return false
+        return RenameOutcome.Failed
     }
 
     /**
      * Mută fișierul într-un subfolder din Download/DLPulse.
      * [destRelativeInsidePublic] e gol pentru rădăcină, sau ex. `audio`, `video/sport`.
+     *
+     * Permisiunile READ_MEDIA_* / „Fișiere și media” sunt doar de citire — pe Android 10+
+     * mutarea cere consimțământ de scriere (dialog sistem) când aplicația nu deține fișierul.
      */
     fun moveToDlpulseSubfolder(
         context: Context,
         entry: DownloadedFileEntry,
         destRelativeInsidePublic: String
-    ): Boolean {
+    ): MoveOutcome {
         val destRel = normalizeRelative(destRelativeInsidePublic)
         val baseDir = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
             SUBFOLDER
         )
-        val destDir = safeResolvedDirectory(baseDir, destRel) ?: return false
-        if (!destDir.exists() && !destDir.mkdirs()) return false
-        if (!destDir.isDirectory) return false
+        val destDir = safeResolvedDirectory(baseDir, destRel) ?: return MoveOutcome.Failed
+        if (!destDir.exists() && !destDir.mkdirs()) {
+            // mkdirs poate eșua pe scoped storage; MediaStore RELATIVE_PATH tot poate muta.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return MoveOutcome.Failed
+        }
+        if (destDir.exists() && !destDir.isDirectory) return MoveOutcome.Failed
 
         val currentRel = relativeInsideDlpulse(entry.file)
             ?: relativeInsideDlpulseFromUri(context, entry.contentUri)
         if (currentRel != null && normalizeRelative(currentRel) == destRel) {
-            return true
+            return MoveOutcome.Success
         }
 
         val name = entry.title
         val destFile = File(destDir, name)
-        if (destFile.exists()) return false
+        val uri = resolveMediaUri(context, entry)
+        if (destFile.exists()) {
+            val src = entry.file
+            val alreadyAtDest = src != null &&
+                runCatching { src.canonicalFile == destFile.canonicalFile }.getOrDefault(false)
+            if (alreadyAtDest) return MoveOutcome.Success
+            val srcMissing = (src == null || !src.exists()) &&
+                (uri == null || !mediaUriExists(context, uri))
+            // Copiere anterioară + consimțământ ștergere: destinația există, sursa a dispărut.
+            if (srcMissing) return MoveOutcome.Success
+            return MoveOutcome.Failed
+        }
 
         val mediaRelativePath = mediaStoreRelativePathFor(destRel)
 
+        // 1) Preferă MediaStore (mută fizic fișierul pe Android 10+).
+        if (uri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            when (val r = updateMediaStoreRelativePathOutcome(context, uri, mediaRelativePath, name)) {
+                is MoveOutcome.Success -> {
+                    // Dacă File.rename n-a avut loc, curățăm calea veche dacă mai există.
+                    entry.file?.takeIf { it.exists() && it.absolutePath != destFile.absolutePath }?.let { old ->
+                        runCatching { old.delete() }
+                        old.parentFile?.absolutePath?.let { scanPath(context, it) }
+                    }
+                    if (destFile.exists()) scanPath(context, destFile.absolutePath)
+                    return MoveOutcome.Success
+                }
+                is MoveOutcome.NeedsUserConsent -> return r
+                is MoveOutcome.Failed -> Unit
+            }
+        }
+
+        // 2) Fallback File (spațiu privat / Android vechi).
         entry.file?.let { src ->
-            if (!src.exists()) return false
-            if (src.parentFile?.canonicalPath == destDir.canonicalPath) return true
-            val moved = src.renameTo(destFile) || copyThenDelete(src, destFile)
-            if (!moved) return false
-            scanPath(context, destFile.absolutePath)
-            src.parentFile?.absolutePath?.let { scanPath(context, it) }
-            val uri = entry.contentUri ?: lookupMediaUriForPublicFile(context, destFile)
-                ?: lookupMediaUriForPublicFile(context, src)
-            if (uri != null) {
-                updateMediaStoreRelativePath(context, uri, mediaRelativePath, name)
-            }
-            return true
-        }
-
-        entry.contentUri?.let { uri ->
-            if (updateMediaStoreRelativePath(context, uri, mediaRelativePath, name)) {
-                return true
-            }
-            // Fallback: copiază conținutul în folderul țintă, apoi șterge sursa.
-            if (!copyUriToPublicFile(context, uri, destFile)) return false
-            return when (deleteMediaRow(context, uri)) {
-                is DeleteOutcome.Success -> true
-                else -> deleteViaDocumentFile(context, uri)
+            if (!src.exists()) {
+                // Doar URI — deja încercat mai sus.
+            } else if (src.parentFile?.canonicalPath == destDir.canonicalPath) {
+                return MoveOutcome.Success
+            } else {
+                val moved = src.renameTo(destFile) || copyThenDelete(src, destFile)
+                if (moved) {
+                    scanPath(context, destFile.absolutePath)
+                    src.parentFile?.absolutePath?.let { scanPath(context, it) }
+                    uri?.let { updateMediaStoreRelativePath(context, it, mediaRelativePath, name) }
+                    return MoveOutcome.Success
+                }
+                if (isAppPrivateFile(context, src)) return MoveOutcome.Failed
             }
         }
 
-        return false
+        // 3) Copiere din URI + ștergere sursă.
+        if (uri != null) {
+            if (destDir.exists() || destDir.mkdirs()) {
+                if (copyUriToPublicFile(context, uri, destFile)) {
+                    return when (val d = deleteMediaRow(context, uri)) {
+                        is DeleteOutcome.Success -> MoveOutcome.Success
+                        is DeleteOutcome.NeedsUserConsent ->
+                            // Fișierul e deja la destinație; cerem consimțământ doar pentru ștergerea sursei.
+                            MoveOutcome.NeedsUserConsent(d.intentSender)
+                        is DeleteOutcome.Failed -> {
+                            if (deleteViaDocumentFile(context, uri)) MoveOutcome.Success
+                            else MoveOutcome.Success // destinația există; sursa poate rămâne (rar)
+                        }
+                    }
+                }
+            }
+            // Ultima șansă: cere acces de scriere, apoi UI reîncearcă mutarea.
+            createWriteRequestSender(context, listOf(uri))?.let {
+                return MoveOutcome.NeedsUserConsent(it)
+            }
+        }
+
+        return MoveOutcome.Failed
     }
 
     fun delete(context: Context, entry: DownloadedFileEntry): DeleteOutcome {
@@ -137,7 +216,6 @@ object DownloadFileModify {
 
         entry.file?.let { f ->
             if (!f.exists()) {
-                // Fișierul e deja lipsă — curăță eventualul rând MediaStore.
                 lookupMediaUriBroad(context, f)?.let { uri ->
                     when (val r = deleteMediaRow(context, uri)) {
                         is DeleteOutcome.Success -> return DeleteOutcome.Success
@@ -148,7 +226,6 @@ object DownloadFileModify {
                 return DeleteOutcome.Success
             }
 
-            // Spațiu privat al aplicației — File.delete e suficient.
             if (isAppPrivateFile(context, f)) {
                 return if (f.delete()) {
                     f.parentFile?.absolutePath?.let { scanPath(context, it) }
@@ -182,6 +259,12 @@ object DownloadFileModify {
         return DeleteOutcome.Failed
     }
 
+    private fun resolveMediaUri(context: Context, entry: DownloadedFileEntry): Uri? {
+        entry.contentUri?.let { return it }
+        val f = entry.file ?: return null
+        return lookupMediaUriBroad(context, f)
+    }
+
     private fun isAppPrivateFile(context: Context, file: File): Boolean {
         val roots = listOfNotNull(
             context.filesDir,
@@ -202,16 +285,29 @@ object DownloadFileModify {
             d != null && d.exists() && !d.isDirectory && d.delete()
         }.getOrDefault(false)
 
+    private fun mediaUriExists(context: Context, uri: Uri): Boolean =
+        runCatching {
+            context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns._ID), null, null, null)
+                ?.use { it.moveToFirst() } == true
+        }.getOrDefault(false)
+
     private fun deleteMediaRow(context: Context, uri: Uri): DeleteOutcome {
         return try {
-            if (context.contentResolver.delete(uri, null, null) > 0) {
-                DeleteOutcome.Success
-            } else {
-                DeleteOutcome.Failed
+            val deleted = context.contentResolver.delete(uri, null, null)
+            when {
+                deleted > 0 -> DeleteOutcome.Success
+                !mediaUriExists(context, uri) -> DeleteOutcome.Success
+                else -> {
+                    // Unele OEM-uri returnează 0 + SecurityException nu e aruncat — cere dialog sistem.
+                    createDeleteRequestSender(context, listOf(uri))?.let {
+                        DeleteOutcome.NeedsUserConsent(it)
+                    } ?: DeleteOutcome.Failed
+                }
             }
         } catch (e: RecoverableSecurityException) {
-            consentSenderFromRecoverable(e)?.let { DeleteOutcome.NeedsUserConsent(it) }
-                ?: createDeleteRequestSender(context, listOf(uri))?.let { DeleteOutcome.NeedsUserConsent(it) }
+            // Pe API 30+ preferăm createDeleteRequest (sistemul șterge direct).
+            createDeleteRequestSender(context, listOf(uri))?.let { DeleteOutcome.NeedsUserConsent(it) }
+                ?: consentSenderFromRecoverable(e)?.let { DeleteOutcome.NeedsUserConsent(it) }
                 ?: DeleteOutcome.Failed
         } catch (_: SecurityException) {
             createDeleteRequestSender(context, listOf(uri))?.let { DeleteOutcome.NeedsUserConsent(it) }
@@ -237,10 +333,14 @@ object DownloadFileModify {
         }.getOrNull()
     }
 
-    /**
-     * Găsește rândul MediaStore pentru un fișier din stocarea partajată (ex. Download/…),
-     * unde [File.delete] eșuează fără ștergere prin URI (Android 10+).
-     */
+    private fun createWriteRequestSender(context: Context, uris: List<Uri>): IntentSender? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || uris.isEmpty()) return null
+        return runCatching {
+            val pi: PendingIntent = MediaStore.createWriteRequest(context.contentResolver, uris)
+            pi.intentSender
+        }.getOrNull()
+    }
+
     private fun lookupMediaUriForPublicFile(context: Context, file: File): Uri? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
         val name = file.name
@@ -376,14 +476,62 @@ object DownloadFileModify {
         relativePath: String,
         displayName: String
     ): Boolean {
+        return updateMediaStoreRelativePathOutcome(context, uri, relativePath, displayName) is MoveOutcome.Success
+    }
+
+    private fun updateMediaStoreRelativePathOutcome(
+        context: Context,
+        uri: Uri,
+        relativePath: String,
+        displayName: String
+    ): MoveOutcome {
         return try {
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
                 put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
             }
-            context.contentResolver.update(uri, values, null, null) > 0
+            if (context.contentResolver.update(uri, values, null, null) > 0) {
+                MoveOutcome.Success
+            } else {
+                createWriteRequestSender(context, listOf(uri))?.let { MoveOutcome.NeedsUserConsent(it) }
+                    ?: MoveOutcome.Failed
+            }
+        } catch (e: RecoverableSecurityException) {
+            createWriteRequestSender(context, listOf(uri))?.let { MoveOutcome.NeedsUserConsent(it) }
+                ?: consentSenderFromRecoverable(e)?.let { MoveOutcome.NeedsUserConsent(it) }
+                ?: MoveOutcome.Failed
+        } catch (_: SecurityException) {
+            createWriteRequestSender(context, listOf(uri))?.let { MoveOutcome.NeedsUserConsent(it) }
+                ?: MoveOutcome.Failed
         } catch (_: Exception) {
-            false
+            MoveOutcome.Failed
+        }
+    }
+
+    private fun renameMediaStoreOutcome(
+        context: Context,
+        uri: Uri,
+        displayName: String
+    ): RenameOutcome {
+        return try {
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+            }
+            if (context.contentResolver.update(uri, values, null, null) > 0) {
+                RenameOutcome.Success
+            } else {
+                createWriteRequestSender(context, listOf(uri))?.let { RenameOutcome.NeedsUserConsent(it) }
+                    ?: RenameOutcome.Failed
+            }
+        } catch (e: RecoverableSecurityException) {
+            createWriteRequestSender(context, listOf(uri))?.let { RenameOutcome.NeedsUserConsent(it) }
+                ?: consentSenderFromRecoverable(e)?.let { RenameOutcome.NeedsUserConsent(it) }
+                ?: RenameOutcome.Failed
+        } catch (_: SecurityException) {
+            createWriteRequestSender(context, listOf(uri))?.let { RenameOutcome.NeedsUserConsent(it) }
+                ?: RenameOutcome.Failed
+        } catch (_: Exception) {
+            RenameOutcome.Failed
         }
     }
 
@@ -430,17 +578,6 @@ object DownloadFileModify {
         if (t.isEmpty()) return null
         if ('/' in t || '\\' in t || t == "." || t == "..") return null
         return t
-    }
-
-    private fun renameMediaStore(context: Context, uri: Uri, displayName: String): Boolean {
-        return try {
-            val values = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
-            }
-            context.contentResolver.update(uri, values, null, null) > 0
-        } catch (_: Exception) {
-            false
-        }
     }
 
     private fun scanPath(context: Context, path: String) {

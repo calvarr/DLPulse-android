@@ -163,14 +163,50 @@ class PublicDownloadsActivity : AppCompatActivity() {
         enterSafMode(uri)
     }
 
-    private val mediaDeleteConsentLauncher = registerForActivityResult(
+    /**
+     * După dialogul sistem (ștergere/scriere MediaStore), reîncearcă operația.
+     * createDeleteRequest șterge deja la OK; retry pe Success/absent e inofensiv.
+     */
+    private sealed class PendingMediaConsent {
+        data class Delete(val entry: DownloadedFileEntry) : PendingMediaConsent()
+        data class Move(val entry: DownloadedFileEntry, val destRel: String) : PendingMediaConsent()
+        data class Rename(val entry: DownloadedFileEntry, val newName: String) : PendingMediaConsent()
+    }
+
+    private var pendingMediaConsent: PendingMediaConsent? = null
+
+    private val mediaModifyConsentLauncher = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            reloadFromDisk(clearSelection = false)
-            Toast.makeText(this, R.string.browse_delete_done, Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(this, R.string.browse_delete_failed, Toast.LENGTH_LONG).show()
+        val pending = pendingMediaConsent
+        pendingMediaConsent = null
+        if (result.resultCode != RESULT_OK || pending == null) {
+            val failRes = when (pending) {
+                is PendingMediaConsent.Move -> R.string.browse_move_failed
+                is PendingMediaConsent.Rename -> R.string.browse_rename_failed
+                else -> R.string.browse_delete_failed
+            }
+            Toast.makeText(this, failRes, Toast.LENGTH_LONG).show()
+            return@registerForActivityResult
+        }
+        when (pending) {
+            is PendingMediaConsent.Delete -> applyDeleteOutcome(
+                DownloadFileModify.delete(this, pending.entry),
+                pending.entry,
+                allowConsentRetry = false
+            )
+            is PendingMediaConsent.Move -> applyMoveOutcome(
+                DownloadFileModify.moveToDlpulseSubfolder(this, pending.entry, pending.destRel),
+                pending.entry,
+                pending.destRel,
+                allowConsentRetry = false
+            )
+            is PendingMediaConsent.Rename -> applyRenameOutcome(
+                DownloadFileModify.rename(this, pending.entry, pending.newName),
+                pending.entry,
+                pending.newName,
+                allowConsentRetry = false
+            )
         }
     }
 
@@ -1110,12 +1146,12 @@ class PublicDownloadsActivity : AppCompatActivity() {
             .setPositiveButton(R.string.browse_ok) { _, _ ->
                 val name = input.text.toString().trim()
                 if (name.isEmpty() || name == entry.title) return@setPositiveButton
-                if (DownloadFileModify.rename(this, entry, name)) {
-                    reloadFromDisk(clearSelection = false)
-                    Toast.makeText(this, R.string.browse_rename_done, Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, R.string.browse_rename_failed, Toast.LENGTH_LONG).show()
-                }
+                applyRenameOutcome(
+                    DownloadFileModify.rename(this, entry, name),
+                    entry,
+                    name,
+                    allowConsentRetry = true
+                )
             }
             .setNegativeButton(R.string.main_cancel, null)
             .show()
@@ -1126,28 +1162,113 @@ class PublicDownloadsActivity : AppCompatActivity() {
             .setTitle(R.string.browse_delete_confirm_title)
             .setMessage(getString(R.string.browse_delete_confirm_message, entry.title))
             .setPositiveButton(R.string.browse_delete) { _, _ ->
-                when (val outcome = DownloadFileModify.delete(this, entry)) {
-                    is DownloadFileModify.DeleteOutcome.Success -> {
-                        reloadFromDisk(clearSelection = false)
-                        Toast.makeText(this, R.string.browse_delete_done, Toast.LENGTH_SHORT).show()
-                    }
-                    is DownloadFileModify.DeleteOutcome.NeedsUserConsent -> {
-                        requestMediaDeleteConsent(outcome.intentSender)
-                    }
-                    is DownloadFileModify.DeleteOutcome.Failed -> {
-                        Toast.makeText(this, R.string.browse_delete_failed, Toast.LENGTH_LONG).show()
-                    }
-                }
+                applyDeleteOutcome(
+                    DownloadFileModify.delete(this, entry),
+                    entry,
+                    allowConsentRetry = true
+                )
             }
             .setNegativeButton(R.string.main_cancel, null)
             .show()
     }
 
-    private fun requestMediaDeleteConsent(sender: IntentSender) {
+    private fun applyDeleteOutcome(
+        outcome: DownloadFileModify.DeleteOutcome,
+        entry: DownloadedFileEntry,
+        allowConsentRetry: Boolean
+    ) {
+        when (outcome) {
+            is DownloadFileModify.DeleteOutcome.Success -> {
+                reloadFromDisk(clearSelection = false)
+                Toast.makeText(this, R.string.browse_delete_done, Toast.LENGTH_SHORT).show()
+            }
+            is DownloadFileModify.DeleteOutcome.NeedsUserConsent -> {
+                if (!allowConsentRetry) {
+                    // createDeleteRequest a putut șterge deja.
+                    reloadFromDisk(clearSelection = false)
+                    Toast.makeText(this, R.string.browse_delete_done, Toast.LENGTH_SHORT).show()
+                    return
+                }
+                requestMediaModifyConsent(
+                    outcome.intentSender,
+                    PendingMediaConsent.Delete(entry),
+                    R.string.browse_delete_failed
+                )
+            }
+            is DownloadFileModify.DeleteOutcome.Failed -> {
+                Toast.makeText(this, R.string.browse_delete_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun applyRenameOutcome(
+        outcome: DownloadFileModify.RenameOutcome,
+        entry: DownloadedFileEntry,
+        newName: String,
+        allowConsentRetry: Boolean
+    ) {
+        when (outcome) {
+            is DownloadFileModify.RenameOutcome.Success -> {
+                reloadFromDisk(clearSelection = false)
+                Toast.makeText(this, R.string.browse_rename_done, Toast.LENGTH_SHORT).show()
+            }
+            is DownloadFileModify.RenameOutcome.NeedsUserConsent -> {
+                if (!allowConsentRetry) {
+                    Toast.makeText(this, R.string.browse_rename_failed, Toast.LENGTH_LONG).show()
+                    return
+                }
+                requestMediaModifyConsent(
+                    outcome.intentSender,
+                    PendingMediaConsent.Rename(entry, newName),
+                    R.string.browse_rename_failed
+                )
+            }
+            is DownloadFileModify.RenameOutcome.Failed -> {
+                Toast.makeText(this, R.string.browse_rename_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun applyMoveOutcome(
+        outcome: DownloadFileModify.MoveOutcome,
+        entry: DownloadedFileEntry,
+        destRel: String,
+        allowConsentRetry: Boolean
+    ) {
+        when (outcome) {
+            is DownloadFileModify.MoveOutcome.Success -> {
+                reloadFromDisk(clearSelection = false)
+                Toast.makeText(this, R.string.browse_move_done, Toast.LENGTH_SHORT).show()
+            }
+            is DownloadFileModify.MoveOutcome.NeedsUserConsent -> {
+                if (!allowConsentRetry) {
+                    reloadFromDisk(clearSelection = false)
+                    Toast.makeText(this, R.string.browse_move_failed, Toast.LENGTH_LONG).show()
+                    return
+                }
+                requestMediaModifyConsent(
+                    outcome.intentSender,
+                    PendingMediaConsent.Move(entry, destRel),
+                    R.string.browse_move_failed
+                )
+            }
+            is DownloadFileModify.MoveOutcome.Failed -> {
+                Toast.makeText(this, R.string.browse_move_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun requestMediaModifyConsent(
+        sender: IntentSender,
+        pending: PendingMediaConsent,
+        failRes: Int
+    ) {
+        pendingMediaConsent = pending
         runCatching {
-            mediaDeleteConsentLauncher.launch(IntentSenderRequest.Builder(sender).build())
+            mediaModifyConsentLauncher.launch(IntentSenderRequest.Builder(sender).build())
         }.onFailure {
-            Toast.makeText(this, R.string.browse_delete_failed, Toast.LENGTH_LONG).show()
+            pendingMediaConsent = null
+            Toast.makeText(this, failRes, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -1187,12 +1308,12 @@ class PublicDownloadsActivity : AppCompatActivity() {
             .setTitle(R.string.browse_move_title)
             .setItems(labels) { _, which ->
                 val dest = destinations[which]
-                if (DownloadFileModify.moveToDlpulseSubfolder(this, entry, dest)) {
-                    reloadFromDisk(clearSelection = false)
-                    Toast.makeText(this, R.string.browse_move_done, Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, R.string.browse_move_failed, Toast.LENGTH_LONG).show()
-                }
+                applyMoveOutcome(
+                    DownloadFileModify.moveToDlpulseSubfolder(this, entry, dest),
+                    entry,
+                    dest,
+                    allowConsentRetry = true
+                )
             }
             .setNegativeButton(R.string.main_cancel, null)
             .show()
