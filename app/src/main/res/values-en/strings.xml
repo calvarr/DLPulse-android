@@ -104,6 +104,15 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="main_dialog_save_title">Where should we save files?</string>
     <string name="main_save_public">Public downloads (DLPulse folder)</string>
     <string name="main_save_other">Other folder (SD card, Drive, etc.)</string>
+    <string name="perm_startup_title">Required permissions</string>
+    <string name="perm_startup_message">DLPulse needs media and file access to list, move, and delete downloads in Download/DLPulse. Please approve the following Android prompts.</string>
+    <string name="perm_startup_continue">Continue</string>
+    <string name="perm_all_files_title">All files access</string>
+    <string name="perm_all_files_message">To move and delete without errors, turn on “Allow access to manage all files” for DLPulse. Photos and media permission is read-only.</string>
+    <string name="perm_all_files_open_settings">Open settings</string>
+    <string name="perm_all_files_later">Later</string>
+    <string name="perm_granted_toast">Permissions granted.</string>
+    <string name="perm_partial_toast">Some permissions are missing — you can grant them in Settings.</string>
     <string name="main_cancel">Cancel</string>
 
     <string name="toast_enter_url">Enter a URL or search terms</string>

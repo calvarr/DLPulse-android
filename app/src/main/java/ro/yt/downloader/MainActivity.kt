@@ -58,6 +58,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var downloadProgressText: TextView
 
     private lateinit var savePrefs: SaveLocationPrefs
+    private lateinit var startupPermsPrefs: StartupPermsPrefs
     private var searchAdapter: SearchResultsAdapter? = null
     private var playlistAdapter: SearchResultsAdapter? = null
     private var currentVideoUrl: String? = null
@@ -96,10 +97,31 @@ class MainActivity : AppCompatActivity() {
         pendingAfterFolder = null
     }
 
+    private val startupRuntimePermLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        val allOk = result.isNotEmpty() && result.values.all { it }
+        if (allOk || AppStartupPermissions.hasMediaReadAccess(this)) {
+            Toast.makeText(this, R.string.perm_granted_toast, Toast.LENGTH_SHORT).show()
+        } else if (result.isNotEmpty()) {
+            Toast.makeText(this, R.string.perm_partial_toast, Toast.LENGTH_LONG).show()
+        }
+        maybePromptAllFilesAccess()
+    }
+
+    private val allFilesAccessLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (AppStartupPermissions.canManageAllFiles()) {
+            Toast.makeText(this, R.string.perm_granted_toast, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         savePrefs = SaveLocationPrefs(this)
+        startupPermsPrefs = StartupPermsPrefs(this)
 
         inputUrl = findViewById(R.id.inputUrl)
         btnGo = findViewById(R.id.btnGo)
@@ -201,6 +223,47 @@ class MainActivity : AppCompatActivity() {
             window.decorView.post { handleSendIntent(intent) }
         }
         applyVersionLineFromCache()
+        window.decorView.post { ensureStartupPermissions() }
+    }
+
+    /** La prima deschidere: media + notificări, apoi Acces la toate fișierele (mutare/ștergere). */
+    private fun ensureStartupPermissions() {
+        val runtimeNeed = AppStartupPermissions.runtimePermissionsToRequest(this)
+        if (runtimeNeed.isNotEmpty()) {
+            if (!startupPermsPrefs.wasRuntimePromptShown()) {
+                startupPermsPrefs.markRuntimePromptShown()
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.perm_startup_title)
+                    .setMessage(R.string.perm_startup_message)
+                    .setPositiveButton(R.string.perm_startup_continue) { _, _ ->
+                        startupRuntimePermLauncher.launch(runtimeNeed)
+                    }
+                    .setCancelable(false)
+                    .show()
+            } else {
+                startupRuntimePermLauncher.launch(runtimeNeed)
+            }
+            return
+        }
+        maybePromptAllFilesAccess()
+    }
+
+    private fun maybePromptAllFilesAccess() {
+        if (!AppStartupPermissions.needsAllFilesAccessPrompt()) return
+        if (startupPermsPrefs.wasAllFilesPromptShown()) return
+        startupPermsPrefs.markAllFilesPromptShown()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.perm_all_files_title)
+            .setMessage(R.string.perm_all_files_message)
+            .setPositiveButton(R.string.perm_all_files_open_settings) { _, _ ->
+                runCatching {
+                    allFilesAccessLauncher.launch(
+                        AppStartupPermissions.allFilesAccessSettingsIntent(this)
+                    )
+                }
+            }
+            .setNegativeButton(R.string.perm_all_files_later, null)
+            .show()
     }
 
     override fun onNewIntent(intent: Intent) {

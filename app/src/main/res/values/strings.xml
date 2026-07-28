@@ -104,6 +104,15 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="main_dialog_save_title">Unde salvăm fișierele?</string>
     <string name="main_save_public">Descărcări publice (folder DLPulse)</string>
     <string name="main_save_other">Alt folder (card, Drive, etc.)</string>
+    <string name="perm_startup_title">Permisiuni necesare</string>
+    <string name="perm_startup_message">DLPulse are nevoie de acces la media și fișiere ca să listeze, mute și șteargă descărcările din Download/DLPulse. Urmează dialogurile Android.</string>
+    <string name="perm_startup_continue">Continuă</string>
+    <string name="perm_all_files_title">Acces la toate fișierele</string>
+    <string name="perm_all_files_message">Pentru mutare și ștergere fără erori, activează „Permite accesul pentru gestionarea tuturor fișierelor” (sau „Acces la toate fișierele”) pentru DLPulse. Permisiunea „Fișiere și media” e doar de citire.</string>
+    <string name="perm_all_files_open_settings">Deschide setările</string>
+    <string name="perm_all_files_later">Mai târziu</string>
+    <string name="perm_granted_toast">Permisiuni acordate.</string>
+    <string name="perm_partial_toast">Unele permisiuni lipsesc — le poți acorda din Setări.</string>
     <string name="main_cancel">Anulează</string>
 
     <string name="toast_enter_url">Introduceți un URL sau un termen de căutare</string>

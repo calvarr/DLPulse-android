@@ -134,6 +134,22 @@ object DownloadFileModify {
 
         val mediaRelativePath = mediaStoreRelativePathFor(destRel)
 
+        // Cu acces „Toate fișierele”, mutarea pe disc e cea mai fiabilă.
+        if (AppStartupPermissions.canManageAllFiles()) {
+            entry.file?.let { src ->
+                if (src.exists()) {
+                    if (!destDir.exists()) destDir.mkdirs()
+                    val moved = src.renameTo(destFile) || copyThenDelete(src, destFile)
+                    if (moved) {
+                        scanPath(context, destFile.absolutePath)
+                        src.parentFile?.absolutePath?.let { scanPath(context, it) }
+                        uri?.let { updateMediaStoreRelativePath(context, it, mediaRelativePath, name) }
+                        return MoveOutcome.Success
+                    }
+                }
+            }
+        }
+
         // 1) Preferă MediaStore (mută fizic fișierul pe Android 10+).
         if (uri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             when (val r = updateMediaStoreRelativePathOutcome(context, uri, mediaRelativePath, name)) {
@@ -195,6 +211,19 @@ object DownloadFileModify {
     }
 
     fun delete(context: Context, entry: DownloadedFileEntry): DeleteOutcome {
+        // Cu MANAGE_EXTERNAL_STORAGE, File.delete/rename funcționează pe stocarea publică.
+        if (AppStartupPermissions.canManageAllFiles()) {
+            entry.file?.let { f ->
+                if (f.exists() && f.delete()) {
+                    f.parentFile?.absolutePath?.let { scanPath(context, it) }
+                    entry.contentUri?.let { uri ->
+                        runCatching { context.contentResolver.delete(uri, null, null) }
+                    }
+                    return DeleteOutcome.Success
+                }
+            }
+        }
+
         // Prefer MediaStore URI (Android 10+ scoped storage) — păstrat și când există File pe disc.
         entry.contentUri?.let { uri ->
             when (val r = deleteMediaRow(context, uri)) {

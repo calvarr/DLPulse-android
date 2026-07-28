@@ -94,6 +94,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
     private val safPathSegments = mutableListOf<String>()
     private val selectedKeys = linkedSetOf<String>()
     private var syncingSelectAllCheck = false
+    private var offeredAllFilesThisSession = false
 
     private var castContext: CastContext? = null
     /** Așteaptă conectarea la TV: păstrăm intrarea ca să putem reporni NanoHTTPD la onSessionStarted. */
@@ -145,6 +146,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
     private val storagePermLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) {
+        maybeOfferAllFilesAccess()
         reloadFromDisk()
     }
 
@@ -706,59 +708,40 @@ class PublicDownloadsActivity : AppCompatActivity() {
         }
     }
 
-    private fun hasStorageReadPermission(): Boolean {
-        return when {
-            Build.VERSION.SDK_INT >= 33 -> {
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.READ_MEDIA_VIDEO
-                ) == PackageManager.PERMISSION_GRANTED &&
-                    ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.READ_MEDIA_AUDIO
-                    ) == PackageManager.PERMISSION_GRANTED
+    private fun hasStorageReadPermission(): Boolean =
+        AppStartupPermissions.hasMediaReadAccess(this)
+
+    private fun ensureStoragePermissionsThenLoad() {
+        val need = AppStartupPermissions.runtimePermissionsToRequest(this)
+            .filter {
+                it == Manifest.permission.READ_MEDIA_VIDEO ||
+                    it == Manifest.permission.READ_MEDIA_AUDIO ||
+                    it == Manifest.permission.READ_EXTERNAL_STORAGE ||
+                    it == Manifest.permission.WRITE_EXTERNAL_STORAGE
             }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED
-            }
-            else -> true
+            .toTypedArray()
+        if (need.isEmpty()) {
+            maybeOfferAllFilesAccess()
+            reloadFromDisk()
+        } else {
+            storagePermLauncher.launch(need)
         }
     }
 
-    private fun ensureStoragePermissionsThenLoad() {
-        val need = mutableListOf<String>()
-        if (Build.VERSION.SDK_INT >= 33) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.READ_MEDIA_VIDEO
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                need.add(Manifest.permission.READ_MEDIA_VIDEO)
+    private fun maybeOfferAllFilesAccess() {
+        if (!AppStartupPermissions.needsAllFilesAccessPrompt()) return
+        if (offeredAllFilesThisSession) return
+        offeredAllFilesThisSession = true
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.perm_all_files_title)
+            .setMessage(R.string.perm_all_files_message)
+            .setPositiveButton(R.string.perm_all_files_open_settings) { _, _ ->
+                runCatching {
+                    startActivity(AppStartupPermissions.allFilesAccessSettingsIntent(this))
+                }
             }
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.READ_MEDIA_AUDIO
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                need.add(Manifest.permission.READ_MEDIA_AUDIO)
-            }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                need.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-            }
-        }
-        if (need.isEmpty()) {
-            reloadFromDisk()
-        } else {
-            storagePermLauncher.launch(need.toTypedArray())
-        }
+            .setNegativeButton(R.string.perm_all_files_later, null)
+            .show()
     }
 
     private fun acquireWifiHighPerf() {
