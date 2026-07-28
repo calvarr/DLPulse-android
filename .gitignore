@@ -3,6 +3,7 @@
 build/
 **/build/
 local.properties
+android-sdk/
 *.iml
 .idea/
 .DS_Store
