@@ -104,6 +104,10 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="main_dialog_save_title">Unde salvăm fișierele?</string>
     <string name="main_save_public">Descărcări publice (folder DLPulse)</string>
     <string name="main_save_other">Alt folder (card, Drive, etc.)</string>
+    <string name="save_picker_here">Salvează aici</string>
+    <string name="save_picker_new_folder">Folder nou</string>
+    <string name="save_picker_custom">Altă cale…</string>
+    <string name="save_picker_up">‥ folder părinte</string>
     <string name="perm_startup_title">Permisiuni necesare</string>
     <string name="perm_startup_message">DLPulse are nevoie de acces la media și fișiere ca să listeze, mute și șteargă descărcările din Download/DLPulse. Urmează dialogurile Android.</string>
     <string name="perm_startup_continue">Continuă</string>
@@ -149,17 +153,18 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="main_term_info_modules">[INFO] Alte module (Python încorporat etc.) se livrează cu APK-ul.</string>
     <string name="main_term_done">$ Gata. Poți închide această consolă.</string>
 
-    <string name="toast_batch_done">Gata: %1$d fișier(e).\nSalvat în app:\n%2$s\nExport suplimentar: %3$d/%1$d.%4$s</string>
+    <string name="toast_batch_done">Gata: %1$d fișier(e).\n%2$s\nExport: %3$d/%1$d.%4$s</string>
     <string name="toast_some_errors">\nUnele: %1$s</string>
 
     <string name="export_private_only">Nu s-a copiat în afara aplicației (ai ales doar memoria privată).</string>
     <string name="export_user_ok">Copiat și în folderul ales.</string>
     <string name="export_user_partial">Parțial în folderul ales (%1$d/%2$d); restul doar în calea de mai sus.</string>
     <string name="export_user_fail">Nu s-a putut scrie în folderul ales; fișierele sunt în calea de mai sus.</string>
-    <string name="export_public_q">Copiat și în Descărcări → DLPulse.</string>
-    <string name="export_public_ok">Copiat în Descărcări publice.</string>
-    <string name="export_public_partial">Export suplimentar: %1$d/%2$d.</string>
-    <string name="toast_done_files">Gata: %1$s\n\nSalvare locală (sursă):\n%2$s\n\n%3$s</string>
+    <string name="export_public_q">Salvat în Descărcări → DLPulse%1$s.</string>
+    <string name="export_public_ok">Salvat în Descărcări → DLPulse%1$s.</string>
+    <string name="export_public_partial">Export: %1$d/%2$d în Descărcări → DLPulse%3$s.</string>
+    <string name="export_staging_cleaned"> (copiile temporare din aplicație au fost șterse)</string>
+    <string name="toast_done_files">Gata: %1$s\n\n%2$s</string>
 
     <string-array name="format_preset_labels">
         <item>Video – cea mai bună calitate (video+audio)</item>

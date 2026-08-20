@@ -19,6 +19,17 @@
         android:minWidth="0dp"
         android:minHeight="0dp" />
 
+    <ImageView
+        android:id="@+id/rowThumb"
+        android:layout_width="72dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="2dp"
+        android:layout_marginEnd="8dp"
+        android:background="#1A1510"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_action_play" />
+
     <TextView
         android:id="@+id/rowFileTitle"
         android:layout_width="0dp"

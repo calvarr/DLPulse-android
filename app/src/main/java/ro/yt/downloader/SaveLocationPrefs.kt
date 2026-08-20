@@ -28,6 +28,14 @@ class SaveLocationPrefs(context: Context) {
         p.edit().putInt(KEY_MODE, d.ordinal).apply()
     }
 
+    /** Cale relativă în Download/DLPulse (gol = rădăcină). */
+    fun getDlpulseRelativePath(): String =
+        DlpulseStorage.normalizeRelative(p.getString(KEY_DLPULSE_REL, "") ?: "")
+
+    fun setDlpulseRelativePath(path: String) {
+        p.edit().putString(KEY_DLPULSE_REL, DlpulseStorage.normalizeRelative(path)).apply()
+    }
+
     fun getTreeUriString(): String? = p.getString(KEY_TREE_URI, null)?.takeIf { it.isNotBlank() }
 
     fun setTreeUri(uri: Uri?) {
@@ -41,5 +49,6 @@ class SaveLocationPrefs(context: Context) {
     companion object {
         private const val KEY_MODE = "mode"
         private const val KEY_TREE_URI = "tree_uri"
+        private const val KEY_DLPULSE_REL = "dlpulse_rel"
     }
 }
