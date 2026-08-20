@@ -265,6 +265,15 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="cast_toast_playback_error">Chromecast: eroare la redare (codec, container sau URL inaccesibil de pe TV). Încearcă MP4 (H.264/AAC) și aceeași rețea Wi‑Fi.</string>
     <string name="cast_needs_play_services">Proiectarea necesită Google Play Services.</string>
     <string name="cast_http_start_failed">Nu pot porni serverul HTTP: fără IP Wi‑Fi util. Dezactivează VPN/Tailscale ca Chromecast să poată accesa telefonul.</string>
+    <string name="cast_target_title">Proiectează pe</string>
+    <string name="cast_target_chromecast">Chromecast / Google Cast</string>
+    <string name="cast_target_amazon">Amazon Fire TV (DLNA)</string>
+    <string name="cast_amazon_scanning">Caut dispozitive Amazon / DLNA pe Wi‑Fi…</string>
+    <string name="cast_amazon_pick_device">Alege dispozitivul Amazon</string>
+    <string name="cast_amazon_none_found">Niciun Fire TV / renderer DLNA găsit.\n\nEcho (Alexa) nu acceptă cast din aplicații third-party. Folosește un Fire TV pe același Wi‑Fi sau Chromecast.</string>
+    <string name="cast_amazon_play_failed">Nu s-a putut porni redarea pe %1$s. Verifică Wi‑Fi și formatul (MP4/MP3).</string>
+    <string name="cast_amazon_started">Proiectare Amazon: %1$s</string>
+    <string name="cast_amazon_finished">Proiecție Amazon încheiată.</string>
     <string name="cast_pick_tv">Alege televizorul / Chromecast din listă.</string>
     <string name="cast_next_file_failed">Nu pot deschide următorul fișier pentru proiecție.</string>
     <string name="cast_head_wifi_long">Verificare: URL-ul local nu răspunde la HEAD. TV-ul poate să nu primească stream-ul; verifică Wi‑Fi.</string>

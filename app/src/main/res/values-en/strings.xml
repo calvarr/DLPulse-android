@@ -265,6 +265,15 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="cast_toast_playback_error">Chromecast playback error (codec, container, or URL unreachable from TV). Try MP4 (H.264/AAC) and the same Wi‑Fi.</string>
     <string name="cast_needs_play_services">Casting requires Google Play Services.</string>
     <string name="cast_http_start_failed">Cannot start HTTP server: no usable Wi‑Fi IP. Disable VPN/Tailscale so Chromecast can reach your phone.</string>
+    <string name="cast_target_title">Cast to</string>
+    <string name="cast_target_chromecast">Chromecast / Google Cast</string>
+    <string name="cast_target_amazon">Amazon Fire TV (DLNA)</string>
+    <string name="cast_amazon_scanning">Searching Amazon / DLNA devices on Wi‑Fi…</string>
+    <string name="cast_amazon_pick_device">Choose Amazon device</string>
+    <string name="cast_amazon_none_found">No Fire TV / DLNA renderer found.\n\nEcho (Alexa) speakers do not accept cast from third-party apps. Use a Fire TV on the same Wi‑Fi, or Chromecast.</string>
+    <string name="cast_amazon_play_failed">Could not start playback on %1$s. Check Wi‑Fi and format (MP4/MP3).</string>
+    <string name="cast_amazon_started">Amazon cast: %1$s</string>
+    <string name="cast_amazon_finished">Amazon cast finished.</string>
     <string name="cast_pick_tv">Pick your TV / Chromecast from the list.</string>
     <string name="cast_next_file_failed">Could not open the next file for casting.</string>
     <string name="cast_head_wifi_long">Check: local URL did not respond to HEAD. The TV may not get the stream; check Wi‑Fi.</string>

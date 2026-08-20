@@ -440,7 +440,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val connected = castContext?.sessionManager?.currentCastSession?.isConnected == true
+        val connected = castContext?.sessionManager?.currentCastSession?.isConnected == true ||
+            amazonCastSession != null
         menu.findItem(R.id.action_disconnect_cast)?.isVisible = connected
         menu.findItem(R.id.action_browse_flat_toggle)?.title = getString(
             if (flatViewAllFiles) R.string.menu_browse_show_folders
@@ -545,6 +546,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
     override fun onDestroy() {
         pendingLoadRunnable?.let { mainHandler.removeCallbacks(it) }
         pendingLoadRunnable = null
+        amazonCastSession?.stop()
+        amazonCastSession = null
         unregisterCastMediaCallback()
         val connected = castContext?.sessionManager?.currentCastSession?.isConnected == true
         if (!connected) {
@@ -771,6 +774,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
         castPlaylist = null
         pendingLoadRunnable?.let { mainHandler.removeCallbacks(it) }
         pendingLoadRunnable = null
+        amazonCastSession?.stop()
+        amazonCastSession = null
         LocalStreamHolder.stop()
         CastStreamService.stop(this)
         unregisterCastMediaCallback()
@@ -1387,6 +1392,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
         }
     }
 
+    private var amazonCastSession: AmazonCastSession? = null
+
     private fun showCastDevicePicker() {
         val selector = MediaRouteSelector.Builder()
             .addControlCategory(
@@ -1445,6 +1452,49 @@ class PublicDownloadsActivity : AppCompatActivity() {
 
     private fun startCastPlaylist(entries: List<DownloadedFileEntry>) {
         if (entries.isEmpty()) return
+        CastTargetChooser.show(
+            activity = this,
+            onChromecast = { startChromecastPlaylist(entries) },
+            onAmazonDevice = { renderer -> startAmazonCastPlaylist(entries, renderer) }
+        )
+    }
+
+    private fun startAmazonCastPlaylist(entries: List<DownloadedFileEntry>, renderer: DlnaRenderer) {
+        amazonCastSession?.stop()
+        // Oprește sesiunea Chromecast dacă e activă, ca să nu concureze pe același stream HTTP.
+        runCatching { CastPlaybackHelper.disconnectCast(this) }
+        amazonCastSession = AmazonCastSession(
+            appContext = applicationContext,
+            renderer = renderer,
+            entries = entries,
+            onFinished = {
+                runOnUiThread {
+                    amazonCastSession = null
+                    Toast.makeText(this, R.string.cast_amazon_finished, Toast.LENGTH_SHORT).show()
+                    updateCastPlaybackBar()
+                }
+            },
+            onError = { msg ->
+                runOnUiThread {
+                    Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+                    amazonCastSession = null
+                    updateCastPlaybackBar()
+                }
+            },
+            onStatus = { title ->
+                runOnUiThread {
+                    Toast.makeText(
+                        this,
+                        getString(R.string.cast_amazon_started, "$title → ${renderer.displayLabel()}"),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        ).also { it.start() }
+    }
+
+    private fun startChromecastPlaylist(entries: List<DownloadedFileEntry>) {
+        if (entries.isEmpty()) return
         if (castContext == null) {
             Toast.makeText(
                 this,
@@ -1453,6 +1503,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
             ).show()
             return
         }
+        amazonCastSession?.stop()
+        amazonCastSession = null
         castOpToken++
         val opToken = castOpToken
         lastLoggedCastState = null

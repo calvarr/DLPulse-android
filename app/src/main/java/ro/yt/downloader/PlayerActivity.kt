@@ -109,10 +109,39 @@ class PlayerActivity : AppCompatActivity() {
         val titleOverride = intent.getStringExtra(EXTRA_TITLE)?.trim()?.takeIf { it.isNotEmpty() }
 
         castContext = runCatching { CastContext.getSharedInstance(this) }.getOrNull()
-        if (castContext == null || resolvedForCast.isEmpty()) {
+        if (resolvedForCast.isEmpty()) {
             binding.playerCastRouteButton.visibility = View.GONE
         } else {
-            CastRouteUi.setUpMediaRouteButton(this, binding.playerCastRouteButton)
+            binding.playerCastRouteButton.visibility = View.VISIBLE
+            binding.playerCastRouteButton.setOnClickListener {
+                CastTargetChooser.show(
+                    activity = this,
+                    onChromecast = {
+                        if (castContext == null) {
+                            android.widget.Toast.makeText(
+                                this,
+                                R.string.cast_needs_play_services,
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                            return@show
+                        }
+                        val selector = androidx.mediarouter.media.MediaRouteSelector.Builder()
+                            .addControlCategory(
+                                com.google.android.gms.cast.CastMediaControlIntent.categoryForCast(
+                                    com.google.android.gms.cast.CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID
+                                )
+                            )
+                            .build()
+                        androidx.mediarouter.app.MediaRouteChooserDialog(this).apply {
+                            setRouteSelector(selector)
+                            show()
+                        }
+                    },
+                    onAmazonDevice = { renderer ->
+                        startAmazonFromPlayer(resolvedForCast, renderer)
+                    }
+                )
+            }
         }
 
         binding.playerBtnBack.setOnClickListener { finish() }
@@ -198,6 +227,43 @@ class PlayerActivity : AppCompatActivity() {
 
         updateCastRemoteUi()
         registerScreenOffReceiver()
+    }
+
+    private var amazonCastSession: AmazonCastSession? = null
+
+    private fun startAmazonFromPlayer(entries: List<DownloadedFileEntry>, renderer: DlnaRenderer) {
+        amazonCastSession?.stop()
+        pauseLocalPlayback()
+        amazonCastSession = AmazonCastSession(
+            appContext = applicationContext,
+            renderer = renderer,
+            entries = entries,
+            onFinished = {
+                runOnUiThread {
+                    amazonCastSession = null
+                    android.widget.Toast.makeText(
+                        this,
+                        R.string.cast_amazon_finished,
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            },
+            onError = { msg ->
+                runOnUiThread {
+                    amazonCastSession = null
+                    android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()
+                }
+            },
+            onStatus = { title ->
+                runOnUiThread {
+                    android.widget.Toast.makeText(
+                        this,
+                        getString(R.string.cast_amazon_started, "$title → ${renderer.displayLabel()}"),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        ).also { it.start() }
     }
 
     private fun pauseLocalPlayback() {
@@ -327,6 +393,8 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         unregisterScreenOffReceiver()
+        amazonCastSession?.stop()
+        amazonCastSession = null
         mediaSession?.release()
         mediaSession = null
         player?.release()
