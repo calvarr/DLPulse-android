@@ -4,6 +4,7 @@ build/
 **/build/
 local.properties
 android-sdk/
+jdk-17/
 *.iml
 .idea/
 .DS_Store
