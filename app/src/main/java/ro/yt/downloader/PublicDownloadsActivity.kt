@@ -1679,13 +1679,14 @@ class PublicDownloadsActivity : AppCompatActivity() {
         inner class FileVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val checkbox: CheckBox = itemView.findViewById(R.id.rowCheckbox)
             private val thumb: ImageView = itemView.findViewById(R.id.rowThumb)
+            private val duration: TextView = itemView.findViewById(R.id.rowDuration)
             private val title: TextView = itemView.findViewById(R.id.rowFileTitle)
             private val more: ImageButton = itemView.findViewById(R.id.btnRowMore)
 
             fun bind(entry: DownloadedFileEntry) {
                 val key = entry.stableKey()
                 title.text = entry.title
-                DownloadArtwork.bind(thumb, entry, R.drawable.ic_action_play)
+                DownloadArtwork.bind(thumb, duration, entry, R.drawable.ic_action_play)
                 more.setOnClickListener { showFileMenu(entry, more) }
 
                 checkbox.setOnCheckedChangeListener(null)

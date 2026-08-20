@@ -4,21 +4,23 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
-import android.net.Uri
 import android.os.Build
 import android.util.LruCache
 import android.util.Size
+import android.view.View
 import android.widget.ImageView
+import android.widget.TextView
 import java.io.File
 import java.util.concurrent.Executors
 
 /**
- * Thumbnail pentru fișiere salvate: sidecar (.jpg) de la yt-dlp, artwork încorporat, sau frame video.
+ * Thumbnail + durată pentru fișiere salvate: sidecar (.jpg), artwork încorporat, frame video.
  */
 object DownloadArtwork {
 
     private val io = Executors.newFixedThreadPool(2)
     private val memory = object : LruCache<String, Bitmap>(24) {}
+    private val durationCache = object : LruCache<String, String>(64) {}
 
     private val imageExts = setOf("jpg", "jpeg", "png", "webp", "image")
 
@@ -58,36 +60,110 @@ object DownloadArtwork {
         return null
     }
 
-    fun bind(imageView: ImageView, entry: DownloadedFileEntry, placeholderRes: Int) {
+    fun bind(
+        imageView: ImageView,
+        durationView: TextView?,
+        entry: DownloadedFileEntry,
+        placeholderRes: Int
+    ) {
         val key = entry.stableKey()
         imageView.tag = key
+        durationView?.tag = key
+        durationView?.visibility = View.GONE
+
+        durationCache.get(key)?.let { cached ->
+            durationView?.let {
+                it.text = cached
+                it.visibility = View.VISIBLE
+            }
+        }
+
         memory.get(key)?.let {
             imageView.setImageBitmap(it)
-            return
-        }
-        findSidecarFile(entry)?.let { file ->
-            imageView.setImageResource(placeholderRes)
-            io.execute {
-                val bmp = decodeSampled(file, 256, 144)
-                if (bmp != null) {
-                    memory.put(key, bmp)
-                    imageView.post {
-                        if (imageView.tag == key) imageView.setImageBitmap(bmp)
-                    }
-                }
+            if (durationCache.get(key) == null) {
+                loadDurationAsync(imageView.context.applicationContext, entry, key, durationView)
             }
             return
         }
+
         imageView.setImageResource(placeholderRes)
         val appCtx = imageView.context.applicationContext
+        val sidecar = findSidecarFile(entry)
         io.execute {
-            val bmp = extractBitmap(appCtx, entry)
-            if (bmp != null) {
-                memory.put(key, bmp)
-                imageView.post {
-                    if (imageView.tag == key) imageView.setImageBitmap(bmp)
+            val bmp = when {
+                sidecar != null -> decodeSampled(sidecar, 256, 144)
+                else -> extractBitmap(appCtx, entry)
+            }
+            val durationText = durationCache.get(key) ?: readDurationFormatted(appCtx, entry)?.also {
+                durationCache.put(key, it)
+            }
+            if (bmp != null) memory.put(key, bmp)
+            imageView.post {
+                if (imageView.tag == key && bmp != null) {
+                    imageView.setImageBitmap(bmp)
+                }
+                if (durationView != null && durationView.tag == key && durationText != null) {
+                    durationView.text = durationText
+                    durationView.visibility = View.VISIBLE
                 }
             }
+        }
+    }
+
+    /** Compat: doar thumbnail, fără badge. */
+    fun bind(imageView: ImageView, entry: DownloadedFileEntry, placeholderRes: Int) {
+        bind(imageView, null, entry, placeholderRes)
+    }
+
+    private fun loadDurationAsync(
+        context: Context,
+        entry: DownloadedFileEntry,
+        key: String,
+        durationView: TextView?
+    ) {
+        if (durationView == null) return
+        io.execute {
+            val text = readDurationFormatted(context, entry) ?: return@execute
+            durationCache.put(key, text)
+            durationView.post {
+                if (durationView.tag == key) {
+                    durationView.text = text
+                    durationView.visibility = View.VISIBLE
+                }
+            }
+        }
+    }
+
+    fun formatDurationMs(durationMs: Long): String? {
+        if (durationMs <= 0L) return null
+        val totalSec = durationMs / 1000L
+        val h = totalSec / 3600L
+        val m = (totalSec % 3600L) / 60L
+        val s = totalSec % 60L
+        return if (h > 0L) {
+            "%d:%02d:%02d".format(h, m, s)
+        } else {
+            "%d:%02d".format(m, s)
+        }
+    }
+
+    private fun readDurationFormatted(context: Context, entry: DownloadedFileEntry): String? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            when {
+                entry.file != null && entry.file.exists() ->
+                    retriever.setDataSource(entry.file.absolutePath)
+                entry.contentUri != null ->
+                    retriever.setDataSource(context, entry.contentUri)
+                else -> return null
+            }
+            val raw = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                ?: return null
+            formatDurationMs(raw.toLongOrNull() ?: return null)
+        } catch (_: Exception) {
+            null
+        } finally {
+            runCatching { retriever.release() }
         }
     }
 
