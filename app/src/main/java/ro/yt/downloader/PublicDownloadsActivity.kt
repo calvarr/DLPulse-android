@@ -16,7 +16,6 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
@@ -27,15 +26,17 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import android.provider.DocumentsContract
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import java.io.File
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -126,6 +127,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
 
     private var castPlaylist: CastPlaylistState? = null
     private var castMediaCallback: RemoteMediaClient.Callback? = null
+    private var amazonCastSession: AmazonCastSession? = null
 
     private val castStateListener = CastStateListener {
         invalidateOptionsMenu()
@@ -355,9 +357,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
         )
 
         castContext = runCatching { CastContext.getSharedInstance(this) }.getOrNull()
-        if (castContext == null) {
-            btnSelectionCast.visibility = View.GONE
-        }
+        // Cast rămâne vizibil și fără Play Services: Amazon Fire TV (DLNA) nu depinde de Cast SDK.
 
         castPlaybackBar = findViewById(R.id.castPlaybackBar)
         castPlaybackTitle = findViewById(R.id.castPlaybackTitle)
@@ -1070,46 +1070,54 @@ class PublicDownloadsActivity : AppCompatActivity() {
     }
 
     private fun showFileMenu(entry: DownloadedFileEntry, anchor: View) {
-        val popup = PopupMenu(this, anchor, Gravity.END)
-        popup.menuInflater.inflate(R.menu.menu_download_file, popup.menu)
-        forcePopupMenuIcons(popup)
-        applyFileMenuIconOnly(popup.menu)
-        if (castContext == null) {
-            popup.menu.findItem(R.id.action_cast_file)?.isVisible = false
+        val content = layoutInflater.inflate(R.layout.popup_file_actions, null)
+        val popup = PopupWindow(
+            content,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            elevation = 10f * resources.displayMetrics.density
+            isOutsideTouchable = true
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         }
-        popup.menu.findItem(R.id.action_rename_file)?.isVisible =
-            browseLocation != BrowseLocation.SAF_LIBRARY
-        popup.menu.findItem(R.id.action_move_file)?.isVisible = true
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.action_play_file -> {
-                    DownloadFileActions.openPlayerInApp(this, entry)
-                    true
-                }
-                R.id.action_share_file -> {
-                    DownloadFileActions.share(this, entry)
-                    true
-                }
-                R.id.action_cast_file -> {
-                    startCastPlaylist(listOf(entry))
-                    true
-                }
-                R.id.action_rename_file -> {
-                    showRenameFileDialog(entry)
-                    true
-                }
-                R.id.action_move_file -> {
-                    showMoveFileDialog(entry)
-                    true
-                }
-                R.id.action_delete_file -> {
-                    showDeleteFileDialog(entry)
-                    true
-                }
-                else -> false
+
+        fun dismissAnd(action: () -> Unit) {
+            popup.dismiss()
+            action()
+        }
+
+        content.findViewById<ImageButton>(R.id.popupPlay).setOnClickListener {
+            dismissAnd { DownloadFileActions.openPlayerInApp(this, entry) }
+        }
+        content.findViewById<ImageButton>(R.id.popupShare).setOnClickListener {
+            dismissAnd { DownloadFileActions.share(this, entry) }
+        }
+        // Cast mereu vizibil: Chromecast și/sau Amazon DLNA (alegere în dialog).
+        content.findViewById<ImageButton>(R.id.popupCast).setOnClickListener {
+            dismissAnd { startCastPlaylist(listOf(entry)) }
+        }
+        val renameBtn = content.findViewById<ImageButton>(R.id.popupRename)
+        if (browseLocation == BrowseLocation.SAF_LIBRARY) {
+            renameBtn.visibility = View.GONE
+        } else {
+            renameBtn.setOnClickListener {
+                dismissAnd { showRenameFileDialog(entry) }
             }
         }
-        popup.show()
+        content.findViewById<ImageButton>(R.id.popupMove).setOnClickListener {
+            dismissAnd { showMoveFileDialog(entry) }
+        }
+        content.findViewById<ImageButton>(R.id.popupDelete).setOnClickListener {
+            dismissAnd { showDeleteFileDialog(entry) }
+        }
+
+        content.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val xOff = (anchor.width - content.measuredWidth).coerceAtMost(0)
+        popup.showAsDropDown(anchor, xOff, 0)
     }
 
     private fun showRenameFileDialog(entry: DownloadedFileEntry) {
@@ -1341,58 +1349,6 @@ class PublicDownloadsActivity : AppCompatActivity() {
             .setNegativeButton(R.string.main_cancel, null)
             .show()
     }
-
-    private fun applyFileMenuIconOnly(menu: Menu) {
-        menu.findItem(R.id.action_play_file)?.let { item ->
-            item.setTitle("")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                item.contentDescription = getString(R.string.cd_menu_play_file)
-            }
-        }
-        menu.findItem(R.id.action_share_file)?.let { item ->
-            item.setTitle("")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                item.contentDescription = getString(R.string.cd_menu_share_file)
-            }
-        }
-        menu.findItem(R.id.action_cast_file)?.let { item ->
-            item.setTitle("")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                item.contentDescription = getString(R.string.cd_menu_cast_file)
-            }
-        }
-        menu.findItem(R.id.action_rename_file)?.let { item ->
-            item.setTitle("")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                item.contentDescription = getString(R.string.cd_menu_rename_file)
-            }
-        }
-        menu.findItem(R.id.action_move_file)?.let { item ->
-            item.setTitle("")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                item.contentDescription = getString(R.string.cd_menu_move_file)
-            }
-        }
-        menu.findItem(R.id.action_delete_file)?.let { item ->
-            item.setTitle("")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                item.contentDescription = getString(R.string.cd_menu_delete_file)
-            }
-        }
-    }
-
-    private fun forcePopupMenuIcons(popup: PopupMenu) {
-        try {
-            val f = PopupMenu::class.java.getDeclaredField("mPopup")
-            f.isAccessible = true
-            val helper = f.get(popup) ?: return
-            val m = helper.javaClass.getMethod("setForceShowIcon", Boolean::class.javaPrimitiveType)
-            m.invoke(helper, true)
-        } catch (_: Exception) {
-        }
-    }
-
-    private var amazonCastSession: AmazonCastSession? = null
 
     private fun showCastDevicePicker() {
         val selector = MediaRouteSelector.Builder()

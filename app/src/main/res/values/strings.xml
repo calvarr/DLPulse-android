@@ -35,7 +35,7 @@
     <string name="cd_language_menu">Limbă</string>
     <string name="cd_menu_play_file">Redă fișierul</string>
     <string name="cd_menu_share_file">Partajă fișierul</string>
-    <string name="cd_menu_cast_file">Proiectează pe Chromecast</string>
+    <string name="cd_menu_cast_file">Proiectează (Chromecast / DLNA)</string>
 
     <string name="player_cast_no_http">Nu pot porni serverul HTTP: fără IP Wi‑Fi util. Dezactivează VPN ca Chromecast să poată accesa telefonul.</string>
     <string name="player_cast_no_session">Sesiune Cast indisponibilă.</string>
@@ -249,7 +249,7 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="browse_selected_n">%1$d selectate</string>
     <string name="cd_browse_playlist_play">Redă playlist</string>
     <string name="cd_browse_selection_share">Partajă selecția</string>
-    <string name="cd_browse_playlist_cast">Proiectează playlist</string>
+    <string name="cd_browse_playlist_cast">Proiectează playlist (Chromecast / DLNA)</string>
     <string name="search_play_in_app">Redă</string>
     <string name="search_play_preparing">Se pregătește redarea…</string>
     <string name="search_play_failed">Nu s-a putut porni redarea.</string>
