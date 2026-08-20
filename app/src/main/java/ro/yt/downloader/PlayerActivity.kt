@@ -1,12 +1,18 @@
 package ro.yt.downloader
 
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -32,6 +38,19 @@ class PlayerActivity : AppCompatActivity() {
     private var inAppCast: PlayerInAppCastHelper? = null
     private var mediaSession: MediaSession? = null
     private var fullscreenUiActive = false
+    private var screenOffReceiverRegistered = false
+
+    /**
+     * La autoblocare (ecran stins) oprim redarea locală.
+     * Chromecast rămâne neatins — doar ExoPlayer pe telefon.
+     */
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                pauseLocalPlayback()
+            }
+        }
+    }
 
     private val castSessionListener = object : SessionManagerListener<CastSession> {
         override fun onSessionStarting(session: CastSession) {}
@@ -90,10 +109,39 @@ class PlayerActivity : AppCompatActivity() {
         val titleOverride = intent.getStringExtra(EXTRA_TITLE)?.trim()?.takeIf { it.isNotEmpty() }
 
         castContext = runCatching { CastContext.getSharedInstance(this) }.getOrNull()
-        if (castContext == null || resolvedForCast.isEmpty()) {
+        if (resolvedForCast.isEmpty()) {
             binding.playerCastRouteButton.visibility = View.GONE
         } else {
-            CastRouteUi.setUpMediaRouteButton(this, binding.playerCastRouteButton)
+            binding.playerCastRouteButton.visibility = View.VISIBLE
+            binding.playerCastRouteButton.setOnClickListener {
+                CastTargetChooser.show(
+                    activity = this,
+                    onChromecast = {
+                        if (castContext == null) {
+                            android.widget.Toast.makeText(
+                                this,
+                                R.string.cast_needs_play_services,
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                            return@show
+                        }
+                        val selector = androidx.mediarouter.media.MediaRouteSelector.Builder()
+                            .addControlCategory(
+                                com.google.android.gms.cast.CastMediaControlIntent.categoryForCast(
+                                    com.google.android.gms.cast.CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID
+                                )
+                            )
+                            .build()
+                        androidx.mediarouter.app.MediaRouteChooserDialog(this).apply {
+                            setRouteSelector(selector)
+                            show()
+                        }
+                    },
+                    onAmazonDevice = { renderer ->
+                        startAmazonFromPlayer(resolvedForCast, renderer)
+                    }
+                )
+            }
         }
 
         binding.playerBtnBack.setOnClickListener { finish() }
@@ -134,10 +182,6 @@ class PlayerActivity : AppCompatActivity() {
             CastSession::class.java
         )
 
-        val needsNetworkWake = uriStrings.any { s ->
-            s.startsWith("http://", ignoreCase = true) ||
-                s.startsWith("https://", ignoreCase = true)
-        }
         val audioAttrs = AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_UNKNOWN)
@@ -145,9 +189,8 @@ class PlayerActivity : AppCompatActivity() {
         val exo = ExoPlayer.Builder(this)
             .setAudioAttributes(audioAttrs, /* handleAudioFocus= */ true)
             .setHandleAudioBecomingNoisy(true)
-            .setWakeMode(
-                if (needsNetworkWake) C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL
-            )
+            // Fără wake lock: redarea nu trebuie să continue după autoblocare.
+            .setWakeMode(C.WAKE_MODE_NONE)
             .build()
         player = exo
         binding.playerView.player = exo
@@ -176,16 +219,74 @@ class PlayerActivity : AppCompatActivity() {
                 castContext = castContext!!,
                 entries = resolvedForCast,
                 currentMediaIndex = { player?.currentMediaItemIndex ?: 0 },
-                pauseLocalPlayback = {
-                    player?.pause()
-                    player?.playWhenReady = false
-                }
+                pauseLocalPlayback = { pauseLocalPlayback() }
             )
         }
 
         castContext?.sessionManager?.currentCastSession?.let { ensureCastMediaCallback(it) }
 
         updateCastRemoteUi()
+        registerScreenOffReceiver()
+    }
+
+    private var amazonCastSession: AmazonCastSession? = null
+
+    private fun startAmazonFromPlayer(entries: List<DownloadedFileEntry>, renderer: DlnaRenderer) {
+        amazonCastSession?.stop()
+        pauseLocalPlayback()
+        amazonCastSession = AmazonCastSession(
+            appContext = applicationContext,
+            renderer = renderer,
+            entries = entries,
+            onFinished = {
+                runOnUiThread {
+                    amazonCastSession = null
+                    android.widget.Toast.makeText(
+                        this,
+                        R.string.cast_amazon_finished,
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            },
+            onError = { msg ->
+                runOnUiThread {
+                    amazonCastSession = null
+                    android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()
+                }
+            },
+            onStatus = { title ->
+                runOnUiThread {
+                    android.widget.Toast.makeText(
+                        this,
+                        getString(R.string.cast_amazon_started, "$title → ${renderer.displayLabel()}"),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        ).also { it.start() }
+    }
+
+    private fun pauseLocalPlayback() {
+        player?.pause()
+        player?.playWhenReady = false
+    }
+
+    private fun registerScreenOffReceiver() {
+        if (screenOffReceiverRegistered) return
+        val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+        ContextCompat.registerReceiver(
+            this,
+            screenOffReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        screenOffReceiverRegistered = true
+    }
+
+    private fun unregisterScreenOffReceiver() {
+        if (!screenOffReceiverRegistered) return
+        runCatching { unregisterReceiver(screenOffReceiver) }
+        screenOffReceiverRegistered = false
     }
 
     /**
@@ -273,11 +374,27 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        // La autoblocare activity trece în onStop; asigurăm pauza și dacă broadcast-ul întârzie.
+        if (!isChangingConfigurations) {
+            val pm = getSystemService(POWER_SERVICE) as? PowerManager
+            val interactive = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+                pm?.isInteractive == true
+            } else {
+                @Suppress("DEPRECATION")
+                pm?.isScreenOn == true
+            }
+            if (!interactive) {
+                pauseLocalPlayback()
+            }
+        }
         unregisterCastMediaCallback()
         super.onStop()
     }
 
     override fun onDestroy() {
+        unregisterScreenOffReceiver()
+        amazonCastSession?.stop()
+        amazonCastSession = null
         mediaSession?.release()
         mediaSession = null
         player?.release()

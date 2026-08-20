@@ -250,6 +250,7 @@ object YtdlpDownload {
                 }
             }
             applyEmbedMetadataForAudio(preset, forceMp3ForYoutubeNativeAudio)
+            applyWriteThumbnailSidecar()
         }
     }
 
@@ -264,6 +265,12 @@ object YtdlpDownload {
         if (!shouldEmbed) return
         addOption("--embed-metadata")
         addOption("--embed-thumbnail")
+    }
+
+    /** Copertă pe disc lângă media (pentru thumbnail în listă). */
+    private fun YoutubeDLRequest.applyWriteThumbnailSidecar() {
+        addOption("--write-thumbnail")
+        addOption("--convert-thumbnails", "jpg")
     }
 
     private fun requestBestEffort(
@@ -292,6 +299,7 @@ object YtdlpDownload {
                 addOption("--audio-quality", "0")
             }
             applyEmbedMetadataForAudio(preset, forceMp3ForYoutubeNativeAudio)
+            applyWriteThumbnailSidecar()
         }
     }
 
@@ -321,6 +329,7 @@ object YtdlpDownload {
                 addOption("--audio-quality", "0")
             }
             applyEmbedMetadataForAudio(preset, forceMp3ForYoutubeNativeAudio)
+            applyWriteThumbnailSidecar()
         }
     }
 }

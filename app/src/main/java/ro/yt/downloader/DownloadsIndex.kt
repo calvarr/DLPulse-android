@@ -40,7 +40,14 @@ object DownloadsIndex {
             queryFilesCollection(context, byKey, ::dedupeKey, ::putMerged)
         }
 
-        return byKey.values.sortedByDescending { it.sortKey }
+        return filterOutThumbnailSidecars(byKey.values).sortedByDescending { it.sortKey }
+    }
+
+    private fun filterOutThumbnailSidecars(
+        files: Collection<DownloadedFileEntry>
+    ): List<DownloadedFileEntry> {
+        val names = files.map { it.title }.toSet()
+        return files.filterNot { DownloadArtwork.isThumbnailSidecar(it.title, names) }
     }
 
     private fun scanPublicFolderToMap(
@@ -54,10 +61,13 @@ object DownloadsIndex {
         )
         if (!dir.isDirectory) return
         fun walk(d: File) {
-            d.listFiles()?.forEach { f ->
+            val children = d.listFiles() ?: return
+            val siblingNames = children.filter { it.isFile }.map { it.name }.toSet()
+            children.forEach { f ->
                 when {
                     f.isDirectory && !f.name.startsWith(".") -> walk(f)
                     f.isFile && f.canRead() && f.length() > 0L -> {
+                        if (DownloadArtwork.isThumbnailSidecar(f.name, siblingNames)) return@forEach
                         val key = dedupeKey(f.name, f.length())
                         putMerged(
                             key,
@@ -344,8 +354,10 @@ object DownloadsIndex {
             ?: emptyList()
 
         val diskFiles = mutableListOf<DownloadedFileEntry>()
+        val allNames = dir.listFiles()?.filter { it.isFile }?.map { it.name }?.toSet() ?: emptySet()
         dir.listFiles()?.forEach { f ->
             if (f.isFile && f.canRead() && f.length() > 0L) {
+                if (DownloadArtwork.isThumbnailSidecar(f.name, allNames)) return@forEach
                 diskFiles.add(
                     DownloadedFileEntry(
                         title = f.name,
@@ -370,7 +382,7 @@ object DownloadsIndex {
             mediaStoreFilesInDirectory(context, rel).forEach { putMerged(it) }
         }
 
-        val files = byKey.values.sortedByDescending { it.sortKey }
+        val files = filterOutThumbnailSidecars(byKey.values).sortedByDescending { it.sortKey }
         return DlpulseDirectoryListing(subfolders, files)
     }
 
@@ -509,13 +521,9 @@ object DownloadsIndex {
      */
     fun createDlpulseSubfolder(context: Context, parentRelativePath: String, rawName: String): Boolean {
         val folderName = sanitizeNewFolderName(rawName) ?: return false
+        if (!DlpulseStorage.ensureRoot(context)) return false
         val rel = normalizeRelativePathInsidePublic(parentRelativePath)
-        val baseDir = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-            SUBFOLDER
-        )
-        val parentDir = safeResolvedDirectory(baseDir, rel) ?: return false
-        if (!parentDir.isDirectory) return false
+        val parentDir = DlpulseStorage.ensureDirectory(context, rel) ?: return false
         val newDir = File(parentDir, folderName)
         if (newDir.exists()) return false
         if (!newDir.mkdir()) return false
