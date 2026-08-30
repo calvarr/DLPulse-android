@@ -820,6 +820,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
                         tree,
                         safPathSegments.toList()
                     )
+                    preloadMetadataCache(listing.files)
                     runOnUiThread {
                         subfoldersInDir = listing.subfolders
                         allEntries = listing.files
@@ -832,6 +833,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
                 BrowseLocation.DLPULSE -> {
                     if (flatViewAllFiles) {
                         val list = DownloadsIndex.listPublicDlpulseOnly(this@PublicDownloadsActivity)
+                        preloadMetadataCache(list)
                         runOnUiThread {
                             subfoldersInDir = emptyList()
                             allEntries = list
@@ -845,6 +847,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
                             this@PublicDownloadsActivity,
                             browseRelativePath
                         )
+                        preloadMetadataCache(listing.files)
                         runOnUiThread {
                             subfoldersInDir = listing.subfolders
                             allEntries = listing.files
@@ -857,6 +860,10 @@ class PublicDownloadsActivity : AppCompatActivity() {
                 }
             }
         }.start()
+    }
+
+    private fun preloadMetadataCache(entries: List<DownloadedFileEntry>) {
+        entries.forEach { DownloadMetadata.load(this, it) }
     }
 
     private fun pruneStaleSelectionKeys() {
