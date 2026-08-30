@@ -1068,10 +1068,13 @@ class MainActivity : AppCompatActivity() {
         val names = files.map { it.name }.toSet()
         return files.filter { f ->
             !DownloadArtwork.isThumbnailSidecar(f.name, names) &&
-                !DownloadArtwork.isImageFileName(f.name)
+                !DownloadArtwork.isImageFileName(f.name) &&
+                !DownloadMetadata.isMetadataSidecar(f.name)
         }.ifEmpty {
-            // Dacă yt-dlp a produs doar media fără clasificare clară, păstrăm non-imagini.
-            files.filterNot { DownloadArtwork.isImageFileName(it.name) }
+            files.filterNot {
+                DownloadArtwork.isImageFileName(it.name) ||
+                    DownloadMetadata.isMetadataSidecar(it.name)
+            }
         }
     }
 
@@ -1080,6 +1083,16 @@ class MainActivity : AppCompatActivity() {
             runCatching { if (f.exists()) f.delete() }
             DownloadArtwork.findSidecarBeside(f)?.let { thumb ->
                 runCatching { if (thumb.exists()) thumb.delete() }
+            }
+            DownloadMetadata.findJsonBeside(f)?.let { json ->
+                runCatching { if (json.exists()) json.delete() }
+            }
+            val parent = f.parentFile
+            val base = f.name.substringBeforeLast('.')
+            parent?.let { p ->
+                runCatching {
+                    File(p, "$base.info.json").takeIf { it.exists() }?.delete()
+                }
             }
         }
     }
@@ -1113,6 +1126,9 @@ class MainActivity : AppCompatActivity() {
                         ok++
                         DownloadArtwork.findSidecarBeside(f)?.let { thumb ->
                             runCatching { UserFolderExporter.copyFileToTree(this, uri, thumb) }
+                        }
+                        DownloadMetadata.findJsonBeside(f)?.let { json ->
+                            runCatching { UserFolderExporter.copyFileToTree(this, uri, json) }
                         }
                     }
                 }

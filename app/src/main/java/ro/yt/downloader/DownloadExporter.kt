@@ -34,15 +34,19 @@ object DownloadExporter {
         }
     }
 
-    /** Copiază media + eventuala copertă sidecar (.jpg etc.). */
+    /** Copiază media + copertă sidecar + metadate JSON. */
     fun copyMediaWithSidecar(
         context: Context,
         media: File,
         relativeInsideDlpulse: String
     ): Boolean {
+        DownloadMetadata.ingestInfoJsonBeside(media)
         val uri = copyToPublicDownloads(context, media, relativeInsideDlpulse) ?: return false
         DownloadArtwork.findSidecarBeside(media)?.let { thumb ->
             runCatching { copyToPublicDownloads(context, thumb, relativeInsideDlpulse) }
+        }
+        DownloadMetadata.findJsonBeside(media)?.let { json ->
+            runCatching { copyToPublicDownloads(context, json, relativeInsideDlpulse) }
         }
         return uri != Uri.EMPTY
     }
@@ -58,6 +62,7 @@ object DownloadExporter {
             name.endsWith(".jpg", true) || name.endsWith(".jpeg", true) -> "image/jpeg"
             name.endsWith(".png", true) -> "image/png"
             name.endsWith(".webp", true) -> "image/webp"
+            name.endsWith(".json", true) -> "application/json"
             else -> "application/octet-stream"
         }
     }

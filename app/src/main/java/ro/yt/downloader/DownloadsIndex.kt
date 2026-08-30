@@ -40,14 +40,17 @@ object DownloadsIndex {
             queryFilesCollection(context, byKey, ::dedupeKey, ::putMerged)
         }
 
-        return filterOutThumbnailSidecars(byKey.values).sortedByDescending { it.sortKey }
+        return filterOutNonMediaSidecars(byKey.values).sortedByDescending { it.sortKey }
     }
 
-    private fun filterOutThumbnailSidecars(
+    private fun filterOutNonMediaSidecars(
         files: Collection<DownloadedFileEntry>
     ): List<DownloadedFileEntry> {
         val names = files.map { it.title }.toSet()
-        return files.filterNot { DownloadArtwork.isThumbnailSidecar(it.title, names) }
+        return files.filterNot {
+            DownloadArtwork.isThumbnailSidecar(it.title, names) ||
+                DownloadMetadata.isMetadataSidecar(it.title)
+        }
     }
 
     private fun scanPublicFolderToMap(
@@ -68,6 +71,7 @@ object DownloadsIndex {
                     f.isDirectory && !f.name.startsWith(".") -> walk(f)
                     f.isFile && f.canRead() && f.length() > 0L -> {
                         if (DownloadArtwork.isThumbnailSidecar(f.name, siblingNames)) return@forEach
+                        if (DownloadMetadata.isMetadataSidecar(f.name)) return@forEach
                         val key = dedupeKey(f.name, f.length())
                         putMerged(
                             key,
@@ -358,6 +362,7 @@ object DownloadsIndex {
         dir.listFiles()?.forEach { f ->
             if (f.isFile && f.canRead() && f.length() > 0L) {
                 if (DownloadArtwork.isThumbnailSidecar(f.name, allNames)) return@forEach
+                if (DownloadMetadata.isMetadataSidecar(f.name)) return@forEach
                 diskFiles.add(
                     DownloadedFileEntry(
                         title = f.name,
@@ -382,7 +387,7 @@ object DownloadsIndex {
             mediaStoreFilesInDirectory(context, rel).forEach { putMerged(it) }
         }
 
-        val files = filterOutThumbnailSidecars(byKey.values).sortedByDescending { it.sortKey }
+        val files = filterOutNonMediaSidecars(byKey.values).sortedByDescending { it.sortKey }
         return DlpulseDirectoryListing(subfolders, files)
     }
 
@@ -516,9 +521,6 @@ object DownloadsIndex {
         return out.toList()
     }
 
-    /**
-     * Creează un subfolder în **Download/DLPulse** sub [parentRelativePath] (gol = rădăcină DLPulse).
-     */
     fun createDlpulseSubfolder(context: Context, parentRelativePath: String, rawName: String): Boolean {
         val folderName = sanitizeNewFolderName(rawName) ?: return false
         if (!DlpulseStorage.ensureRoot(context)) return false
@@ -541,4 +543,57 @@ object DownloadsIndex {
         if (t.isEmpty() || t == "." || t == "..") return null
         return if (t.length > 80) t.take(80) else t
     }
+
+    /**
+     * Șterge un subfolder din Download/DLPulse și tot conținutul (media + sidecar-uri).
+     */
+    fun deleteDlpulseSubfolder(
+        context: Context,
+        parentRelativePath: String,
+        folderName: String
+    ): FolderDeleteOutcome {
+        val rel = normalizeRelativePathInsidePublic(parentRelativePath)
+        val baseDir = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            SUBFOLDER
+        )
+        val parentDir = safeResolvedDirectory(baseDir, rel) ?: return FolderDeleteOutcome.Failed
+        val target = File(parentDir, folderName)
+        if (!target.isDirectory) return FolderDeleteOutcome.Failed
+        val folderRel = if (rel.isEmpty()) folderName else "$rel/$folderName"
+        val listing = listPublicDlpulseDirectory(context, folderRel)
+        val pendingConsent = mutableListOf<android.content.IntentSender>()
+        for (sub in listing.subfolders) {
+            when (val subResult = deleteDlpulseSubfolder(context, folderRel, sub)) {
+                is FolderDeleteOutcome.Failed -> return FolderDeleteOutcome.Failed
+                is FolderDeleteOutcome.NeedsUserConsent ->
+                    pendingConsent.add(subResult.intentSender)
+                is FolderDeleteOutcome.Success -> Unit
+            }
+        }
+        for (entry in listing.files) {
+            when (val r = DownloadFileModify.delete(context, entry)) {
+                is DownloadFileModify.DeleteOutcome.Success -> Unit
+                is DownloadFileModify.DeleteOutcome.NeedsUserConsent ->
+                    pendingConsent.add(r.intentSender)
+                is DownloadFileModify.DeleteOutcome.Failed ->
+                    return FolderDeleteOutcome.Failed
+            }
+        }
+        if (pendingConsent.isNotEmpty()) {
+            return FolderDeleteOutcome.NeedsUserConsent(pendingConsent.first())
+        }
+        return if (target.delete()) {
+            DownloadMetadata.clearCache()
+            FolderDeleteOutcome.Success
+        } else {
+            FolderDeleteOutcome.Failed
+        }
+    }
+}
+
+sealed class FolderDeleteOutcome {
+    data object Success : FolderDeleteOutcome()
+    data object Failed : FolderDeleteOutcome()
+    data class NeedsUserConsent(val intentSender: android.content.IntentSender) : FolderDeleteOutcome()
 }

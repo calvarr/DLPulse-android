@@ -174,6 +174,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
      */
     private sealed class PendingMediaConsent {
         data class Delete(val entry: DownloadedFileEntry) : PendingMediaConsent()
+        data class DeleteFolder(val parentRel: String, val folderName: String) : PendingMediaConsent()
         data class Move(val entry: DownloadedFileEntry, val destRel: String) : PendingMediaConsent()
         data class Rename(val entry: DownloadedFileEntry, val newName: String) : PendingMediaConsent()
     }
@@ -198,6 +199,12 @@ class PublicDownloadsActivity : AppCompatActivity() {
             is PendingMediaConsent.Delete -> applyDeleteOutcome(
                 DownloadFileModify.delete(this, pending.entry),
                 pending.entry,
+                allowConsentRetry = false
+            )
+            is PendingMediaConsent.DeleteFolder -> applyFolderDeleteOutcome(
+                deleteBrowseFolder(pending.parentRel, pending.folderName),
+                pending.parentRel,
+                pending.folderName,
                 allowConsentRetry = false
             )
             is PendingMediaConsent.Move -> applyMoveOutcome(
@@ -793,6 +800,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
     }
 
     private fun reloadFromDisk(clearSelection: Boolean = true) {
+        DownloadMetadata.clearCache()
         Thread {
             when (browseLocation) {
                 BrowseLocation.SAF_LIBRARY -> {
@@ -1040,7 +1048,13 @@ class PublicDownloadsActivity : AppCompatActivity() {
         val filteredFiles = if (q.isEmpty()) {
             allEntries
         } else {
-            allEntries.filter { it.title.lowercase().contains(q) }
+            allEntries.filter { entry ->
+                if (entry.title.lowercase().contains(q)) return@filter true
+                val meta = DownloadMetadata.load(this, entry)
+                meta?.title?.lowercase()?.contains(q) == true ||
+                    meta?.subtitle()?.lowercase()?.contains(q) == true ||
+                    meta?.primaryCreator()?.lowercase()?.contains(q) == true
+            }
         }
         val fileRows = filteredFiles.map { BrowseRow.FileRow(it) }
         displayedBrowseRows = folderRows + fileRows
@@ -1152,6 +1166,76 @@ class PublicDownloadsActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.main_cancel, null)
             .show()
+    }
+
+    private fun showDeleteFolderDialog(folderName: String) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.browse_delete_folder_confirm_title)
+            .setMessage(getString(R.string.browse_delete_folder_confirm_message, folderName))
+            .setPositiveButton(R.string.browse_delete) { _, _ ->
+                val parentRel = when (browseLocation) {
+                    BrowseLocation.DLPULSE -> browseRelativePath
+                    BrowseLocation.SAF_LIBRARY -> safPathSegments.joinToString("/")
+                }
+                applyFolderDeleteOutcome(
+                    deleteBrowseFolder(parentRel, folderName),
+                    parentRel,
+                    folderName,
+                    allowConsentRetry = true
+                )
+            }
+            .setNegativeButton(R.string.main_cancel, null)
+            .show()
+    }
+
+    private fun deleteBrowseFolder(parentRel: String, folderName: String): FolderDeleteOutcome {
+        return when (browseLocation) {
+            BrowseLocation.DLPULSE ->
+                DownloadsIndex.deleteDlpulseSubfolder(this, parentRel, folderName)
+            BrowseLocation.SAF_LIBRARY -> {
+                val tree = safTreeUri ?: return FolderDeleteOutcome.Failed
+                if (SafDirectoryListing.deleteFolder(
+                        this,
+                        tree,
+                        safPathSegments.toList(),
+                        folderName
+                    )
+                ) {
+                    FolderDeleteOutcome.Success
+                } else {
+                    FolderDeleteOutcome.Failed
+                }
+            }
+        }
+    }
+
+    private fun applyFolderDeleteOutcome(
+        outcome: FolderDeleteOutcome,
+        parentRel: String,
+        folderName: String,
+        allowConsentRetry: Boolean
+    ) {
+        when (outcome) {
+            is FolderDeleteOutcome.Success -> {
+                reloadFromDisk(clearSelection = false)
+                Toast.makeText(this, R.string.browse_delete_folder_done, Toast.LENGTH_SHORT).show()
+            }
+            is FolderDeleteOutcome.NeedsUserConsent -> {
+                if (!allowConsentRetry) {
+                    reloadFromDisk(clearSelection = false)
+                    Toast.makeText(this, R.string.browse_delete_folder_done, Toast.LENGTH_SHORT).show()
+                    return
+                }
+                requestMediaModifyConsent(
+                    outcome.intentSender,
+                    PendingMediaConsent.DeleteFolder(parentRel, folderName),
+                    R.string.browse_delete_folder_failed
+                )
+            }
+            is FolderDeleteOutcome.Failed -> {
+                Toast.makeText(this, R.string.browse_delete_folder_failed, Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun showDeleteFileDialog(entry: DownloadedFileEntry) {
@@ -1677,24 +1761,29 @@ class PublicDownloadsActivity : AppCompatActivity() {
 
         inner class FolderVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val name: TextView = itemView.findViewById(R.id.rowFolderName)
+            private val deleteBtn: ImageButton = itemView.findViewById(R.id.btnFolderDelete)
 
             fun bind(folderName: String) {
                 name.text = folderName
                 itemView.setOnClickListener { navigateIntoFolder(folderName) }
+                deleteBtn.setOnClickListener { showDeleteFolderDialog(folderName) }
             }
         }
 
         inner class FileVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val checkbox: CheckBox = itemView.findViewById(R.id.rowCheckbox)
-            private val thumb: ImageView = itemView.findViewById(R.id.rowThumb)
-            private val duration: TextView = itemView.findViewById(R.id.rowDuration)
             private val title: TextView = itemView.findViewById(R.id.rowFileTitle)
+            private val meta: TextView = itemView.findViewById(R.id.rowFileMeta)
+            private val duration: TextView = itemView.findViewById(R.id.rowDuration)
             private val more: ImageButton = itemView.findViewById(R.id.btnRowMore)
 
             fun bind(entry: DownloadedFileEntry) {
                 val key = entry.stableKey()
-                title.text = entry.title
-                DownloadArtwork.bind(thumb, duration, entry, R.drawable.ic_action_play)
+                title.text = entry.title.substringBeforeLast('.').ifBlank { entry.title }
+                meta.visibility = View.GONE
+                duration.visibility = View.GONE
+                meta.tag = key
+                duration.tag = key
                 more.setOnClickListener { showFileMenu(entry, more) }
 
                 checkbox.setOnCheckedChangeListener(null)
@@ -1706,6 +1795,31 @@ class PublicDownloadsActivity : AppCompatActivity() {
                 title.setOnClickListener {
                     checkbox.isChecked = !checkbox.isChecked
                 }
+
+                Thread {
+                    val info = DownloadMetadata.load(this@PublicDownloadsActivity, entry)
+                    val displayTitle = info?.title?.takeIf { it.isNotBlank() }
+                        ?: entry.title.substringBeforeLast('.').ifBlank { entry.title }
+                    val subtitle = info?.subtitle()
+                    val durationText = info?.durationSeconds?.let {
+                        DownloadArtwork.formatDurationMs(it * 1000L)
+                    }
+                    runOnUiThread {
+                        if (!isFinishing && meta.tag == key) {
+                            title.text = displayTitle
+                            if (!subtitle.isNullOrBlank()) {
+                                meta.text = subtitle
+                                meta.visibility = View.VISIBLE
+                            } else {
+                                meta.visibility = View.GONE
+                            }
+                            if (durationText != null) {
+                                duration.text = durationText
+                                duration.visibility = View.VISIBLE
+                            }
+                        }
+                    }
+                }.start()
             }
         }
     }

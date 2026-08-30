@@ -18,8 +18,11 @@ data class SearchResultItem(
     val title: String,
     val url: String,
     val thumbnail: String?,
-    val durationSeconds: Long? = null
-)
+    val durationSeconds: Long? = null,
+    val metadata: MediaMetadataInfo? = null
+) {
+    fun subtitle(): String? = metadata?.subtitle()
+}
 
 object YtdlpJson {
 
@@ -269,7 +272,8 @@ object YtdlpJson {
                 }
             }
             val durationSeconds = durationFromFlatEntry(e)
-            out.add(SearchResultItem(idStr, title, pageUrlNorm, thumb, durationSeconds))
+            val metadata = DownloadMetadata.fromFlatEntry(e)
+            out.add(SearchResultItem(idStr, title, pageUrlNorm, thumb, durationSeconds, metadata))
         }
         return out
     }

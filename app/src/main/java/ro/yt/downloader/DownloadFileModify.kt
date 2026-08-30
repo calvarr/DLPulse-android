@@ -219,7 +219,7 @@ object DownloadFileModify {
                     entry.contentUri?.let { uri ->
                         runCatching { context.contentResolver.delete(uri, null, null) }
                     }
-                    return DeleteOutcome.Success
+                    return finishDeleteSuccess(context, entry)
                 }
             }
         }
@@ -230,14 +230,14 @@ object DownloadFileModify {
                 is DeleteOutcome.Success -> {
                     runCatching { entry.file?.takeIf { it.exists() }?.delete() }
                     entry.file?.parentFile?.absolutePath?.let { scanPath(context, it) }
-                    return DeleteOutcome.Success
+                    return finishDeleteSuccess(context, entry)
                 }
                 is DeleteOutcome.NeedsUserConsent -> return r
                 is DeleteOutcome.Failed -> {
                     if (deleteViaDocumentFile(context, uri)) {
                         runCatching { entry.file?.takeIf { it.exists() }?.delete() }
                         entry.file?.parentFile?.absolutePath?.let { scanPath(context, it) }
-                        return DeleteOutcome.Success
+                        return finishDeleteSuccess(context, entry)
                     }
                 }
             }
@@ -247,7 +247,7 @@ object DownloadFileModify {
             if (!f.exists()) {
                 lookupMediaUriBroad(context, f)?.let { uri ->
                     when (val r = deleteMediaRow(context, uri)) {
-                        is DeleteOutcome.Success -> return DeleteOutcome.Success
+                        is DeleteOutcome.Success -> return finishDeleteSuccess(context, entry)
                         is DeleteOutcome.NeedsUserConsent -> return r
                         is DeleteOutcome.Failed -> Unit
                     }
@@ -258,7 +258,7 @@ object DownloadFileModify {
             if (isAppPrivateFile(context, f)) {
                 return if (f.delete()) {
                     f.parentFile?.absolutePath?.let { scanPath(context, it) }
-                    DeleteOutcome.Success
+                    finishDeleteSuccess(context, entry)
                 } else {
                     DeleteOutcome.Failed
                 }
@@ -271,7 +271,7 @@ object DownloadFileModify {
                         is DeleteOutcome.Success -> {
                             runCatching { if (f.exists()) f.delete() }
                             f.parentFile?.absolutePath?.let { scanPath(context, it) }
-                            return DeleteOutcome.Success
+                            return finishDeleteSuccess(context, entry)
                         }
                         is DeleteOutcome.NeedsUserConsent -> return r
                         is DeleteOutcome.Failed -> Unit
@@ -281,11 +281,29 @@ object DownloadFileModify {
 
             if (f.delete()) {
                 f.parentFile?.absolutePath?.let { scanPath(context, it) }
-                return DeleteOutcome.Success
+                return finishDeleteSuccess(context, entry)
             }
         }
 
         return DeleteOutcome.Failed
+    }
+
+    private fun deleteAssociatedSidecars(context: Context, entry: DownloadedFileEntry) {
+        DownloadMetadata.resolveSidecarFiles(context, entry).forEach { sidecar ->
+            if (sidecar.exists()) {
+                sidecar.delete()
+                scanPath(context, sidecar.absolutePath)
+            }
+            lookupMediaUriBroad(context, sidecar)?.let { uri ->
+                runCatching { context.contentResolver.delete(uri, null, null) }
+            }
+        }
+        DownloadMetadata.invalidateCache(entry.stableKey())
+    }
+
+    private fun finishDeleteSuccess(context: Context, entry: DownloadedFileEntry): DeleteOutcome {
+        deleteAssociatedSidecars(context, entry)
+        return DeleteOutcome.Success
     }
 
     private fun resolveMediaUri(context: Context, entry: DownloadedFileEntry): Uri? {

@@ -35,5 +35,8 @@ data class DownloadedFileEntry(
             "${context.packageName}.fileprovider",
             f
         )
+    fun displayTitle(context: Context): String {
+        DownloadMetadata.load(context, this)?.title?.takeIf { it.isNotBlank() }?.let { return it }
+        return title.substringBeforeLast('.').ifBlank { title }
     }
 }
