@@ -160,6 +160,7 @@ class MainActivity : AppCompatActivity() {
         terminalProgress = findViewById(R.id.terminalProgress)
         btnTerminalClose = findViewById(R.id.btnTerminalClose)
         textAppVersion = findViewById(R.id.textAppVersion)
+        textAppVersion.setOnClickListener { checkForAppUpdateNow(forceDialog = true) }
 
         btnIconUpdate.setOnClickListener { startManualDependencyUpdate() }
         btnIconDonate.setOnClickListener {
@@ -438,8 +439,17 @@ class MainActivity : AppCompatActivity() {
     private fun refreshReleaseInfoFromGitHub() {
         val prefs = UpdateCheckPrefs(this)
         if (!prefs.shouldRunNetworkCheck()) return
+        checkForAppUpdateNow(forceDialog = false)
+    }
+
+    private fun checkForAppUpdateNow(forceDialog: Boolean) {
         if (githubReleaseCheckRunning) return
         githubReleaseCheckRunning = true
+        val prefs = UpdateCheckPrefs(this)
+        if (forceDialog) {
+            prefs.forceAllowNetworkCheck()
+            prefs.clearDismissedOffer()
+        }
         Thread {
             val result = GitHubLatestRelease.fetchLatest()
             runOnUiThread {
@@ -451,13 +461,31 @@ class MainActivity : AppCompatActivity() {
                             prefs.cacheRemoteRelease(info.versionCore, info.tagName)
                             applyVersionLineFromCache()
                             val installed = installedVersionName()
-                            if (AppVersion.compare(installed, info.versionCore) < 0 &&
-                                !UpdateCheckPrefs(this@MainActivity).isOfferDismissedForTag(info.tagName)
+                            val outdated = AppVersion.compare(installed, info.versionCore) < 0
+                            if (outdated &&
+                                (forceDialog || !prefs.isOfferDismissedForTag(info.tagName))
                             ) {
                                 showUpdateAvailableDialog(info, installed)
+                            } else if (forceDialog && !outdated) {
+                                Toast.makeText(
+                                    this,
+                                    getString(R.string.app_version_with_latest, installed, info.versionCore),
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         },
-                        onFailure = { /* păstrăm ultimul cache; reîncercăm după interval */ }
+                        onFailure = {
+                            if (forceDialog) {
+                                Toast.makeText(
+                                    this,
+                                    getString(
+                                        R.string.update_download_failed,
+                                        it.message ?: getString(R.string.err_generic)
+                                    ),
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
                     )
                 } finally {
                     githubReleaseCheckRunning = false
@@ -468,6 +496,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showUpdateAvailableDialog(info: GitHubReleaseInfo, installed: String) {
         val prefs = UpdateCheckPrefs(this)
+        val apkUrl = info.apkBrowserDownloadUrl
         val b = MaterialAlertDialogBuilder(this)
             .setTitle(R.string.update_available_title)
             .setMessage(
@@ -478,17 +507,22 @@ class MainActivity : AppCompatActivity() {
                     info.tagName
                 )
             )
-            .setPositiveButton(R.string.update_open_release) { _, _ ->
-                prefs.dismissOfferForTag(info.tagName)
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.htmlUrl)))
-            }
             .setNegativeButton(R.string.update_later) { _, _ ->
                 prefs.dismissOfferForTag(info.tagName)
             }
-        if (!info.apkBrowserDownloadUrl.isNullOrBlank()) {
-            b.setNeutralButton(R.string.update_download_apk) { _, _ ->
+            .setNeutralButton(R.string.update_open_release) { _, _ ->
                 prefs.dismissOfferForTag(info.tagName)
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.apkBrowserDownloadUrl)))
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.htmlUrl)))
+            }
+        if (!apkUrl.isNullOrBlank()) {
+            b.setPositiveButton(R.string.update_download_apk) { _, _ ->
+                prefs.dismissOfferForTag(info.tagName)
+                AppUpdateInstaller.start(this, apkUrl, info.versionCore)
+            }
+        } else {
+            b.setPositiveButton(R.string.update_open_release) { _, _ ->
+                prefs.dismissOfferForTag(info.tagName)
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.htmlUrl)))
             }
         }
         b.show()

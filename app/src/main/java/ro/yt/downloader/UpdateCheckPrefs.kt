@@ -40,4 +40,16 @@ class UpdateCheckPrefs(context: Context) {
 
     fun getCachedRemoteVersion(): String? =
         p.getString(KEY_CACHED_REMOTE_VERSION, null)?.takeIf { it.isNotBlank() }
+
+    fun getCachedRemoteTag(): String? =
+        p.getString(KEY_CACHED_REMOTE_TAG, null)?.takeIf { it.isNotBlank() }
+
+    /** Permite o verificare imediată (ex. tap pe linia de versiune). */
+    fun forceAllowNetworkCheck() {
+        p.edit().putLong(KEY_LAST_NETWORK_CHECK_MS, 0L).apply()
+    }
+
+    fun clearDismissedOffer() {
+        p.edit().remove(KEY_DISMISSED_TAG).apply()
+    }
 }

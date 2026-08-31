@@ -9,20 +9,29 @@ android {
         applicationId = "ro.yt.downloader"
         minSdk = 24
         targetSdk = 34
-        versionCode = 15
-        versionName = "1.0.15"
+        versionCode = 16
+        versionName = "1.0.16"
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         }
     }
     signingConfigs {
-        // Reuses the standard debug keystore so `assembleRelease` produces an installable APK
-        // for GitHub / sideloading. Use your own keystore for Play Store releases.
+        // Keystore stabil în repo: update in-place pe sideload (aceeași semnătură la fiecare CI).
+        // Nu e pentru Play Store.
         create("releaseSideload") {
-            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            val ks = rootProject.file("keystore/dlpulse-sideload.jks")
+            if (ks.isFile) {
+                storeFile = ks
+                storePassword = "dlpulse-sideload"
+                keyAlias = "dlpulse"
+                keyPassword = "dlpulse-sideload"
+            } else {
+                // Fallback local dacă lipsește keystore-ul din checkout.
+                storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
     }
     buildTypes {

@@ -15,10 +15,13 @@ captures/
 # Large / local junk
 *.hprof
 
-# Keystores (never commit real release keys)
+# Keystores (never commit Play Store / private keys)
 *.jks
 *.keystore
 keystore.properties
+# Excepție: keystore public pentru sideload GitHub (aceeași semnătură la fiecare release)
+!keystore/
+!keystore/dlpulse-sideload.jks
 
 # Built APKs (attach to GitHub Releases instead of committing)
 *.apk
