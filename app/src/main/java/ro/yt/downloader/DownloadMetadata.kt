@@ -56,7 +56,9 @@ object DownloadMetadata {
     private const val INFO_JSON_SUFFIX = ".info.json"
     private const val SUBFOLDER = "DLPulse"
 
-    private val cache = ConcurrentHashMap<String, MediaMetadataInfo?>()
+    // ConcurrentHashMap nu acceptă null — ținem „fără metadata” separat.
+    private val cache = ConcurrentHashMap<String, MediaMetadataInfo>()
+    private val emptyKeys = ConcurrentHashMap.newKeySet<String>()
     private val io = Executors.newSingleThreadExecutor()
 
     fun loadAsync(
@@ -66,14 +68,18 @@ object DownloadMetadata {
     ) {
         val appCtx = context.applicationContext
         val key = entry.stableKey()
+        if (key in emptyKeys) {
+            onResult(null)
+            return
+        }
         cache[key]?.let {
             onResult(it)
             return
         }
         io.execute {
             val loaded = runCatching { loadUncached(appCtx, entry) }.getOrNull()
-            cache[key] = loaded
-            onResult(loaded)
+            putCache(key, loaded)
+            runCatching { onResult(loaded) }
         }
     }
 
@@ -100,22 +106,38 @@ object DownloadMetadata {
     fun load(context: Context, entry: DownloadedFileEntry): MediaMetadataInfo? {
         val appCtx = context.applicationContext
         val key = entry.stableKey()
+        if (key in emptyKeys) return null
         cache[key]?.let { return it }
-        val loaded = loadUncached(appCtx, entry)
-        cache[key] = loaded
+        val loaded = runCatching { loadUncached(appCtx, entry) }.getOrNull()
+        putCache(key, loaded)
         return loaded
     }
 
     /** Doar din cache — sigur pe UI thread (filtru, bind rapid). */
-    fun peekCached(entry: DownloadedFileEntry): MediaMetadataInfo? =
-        cache[entry.stableKey()]
+    fun peekCached(entry: DownloadedFileEntry): MediaMetadataInfo? {
+        val key = entry.stableKey()
+        if (key in emptyKeys) return null
+        return cache[key]
+    }
 
     fun invalidateCache(key: String) {
         cache.remove(key)
+        emptyKeys.remove(key)
     }
 
     fun clearCache() {
         cache.clear()
+        emptyKeys.clear()
+    }
+
+    private fun putCache(key: String, value: MediaMetadataInfo?) {
+        if (value == null) {
+            cache.remove(key)
+            emptyKeys.add(key)
+        } else {
+            emptyKeys.remove(key)
+            cache[key] = value
+        }
     }
 
     private fun loadUncached(context: Context, entry: DownloadedFileEntry): MediaMetadataInfo? {
