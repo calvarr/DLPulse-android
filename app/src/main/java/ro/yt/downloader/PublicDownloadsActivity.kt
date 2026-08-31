@@ -1814,26 +1814,29 @@ class PublicDownloadsActivity : AppCompatActivity() {
                     checkbox.isChecked = !checkbox.isChecked
                 }
 
-                DownloadMetadata.loadAsync(this@PublicDownloadsActivity, entry) { info ->
-                    if (isDestroyed || isFinishing) return@loadAsync
-                    val displayTitle = info?.title?.takeIf { it.isNotBlank() }
-                        ?: entry.title.substringBeforeLast('.').ifBlank { entry.title }
-                    val subtitle = info?.subtitle()
-                    val durationText = info?.durationSeconds?.let {
-                        DownloadArtwork.formatDurationMs(it * 1000L)
-                    }
-                    runOnUiThread {
-                        if (isDestroyed || isFinishing || meta.tag != key) return@runOnUiThread
-                        title.text = displayTitle
-                        if (!subtitle.isNullOrBlank()) {
-                            meta.text = subtitle
-                            meta.visibility = View.VISIBLE
-                        } else {
-                            meta.visibility = View.GONE
+                // Metadata e opțională — orice eșec nu trebuie să închidă browserul.
+                runCatching {
+                    DownloadMetadata.loadAsync(this@PublicDownloadsActivity, entry) { info ->
+                        if (isDestroyed || isFinishing) return@loadAsync
+                        val displayTitle = info?.title?.takeIf { it.isNotBlank() }
+                            ?: entry.title.substringBeforeLast('.').ifBlank { entry.title }
+                        val subtitle = info?.subtitle()
+                        val durationText = info?.durationSeconds?.let {
+                            DownloadArtwork.formatDurationMs(it * 1000L)
                         }
-                        if (durationText != null) {
-                            duration.text = durationText
-                            duration.visibility = View.VISIBLE
+                        runOnUiThread {
+                            if (isDestroyed || isFinishing || meta.tag != key) return@runOnUiThread
+                            title.text = displayTitle
+                            if (!subtitle.isNullOrBlank()) {
+                                meta.text = subtitle
+                                meta.visibility = View.VISIBLE
+                            } else {
+                                meta.visibility = View.GONE
+                            }
+                            if (durationText != null) {
+                                duration.text = durationText
+                                duration.visibility = View.VISIBLE
+                            }
                         }
                     }
                 }
