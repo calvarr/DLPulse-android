@@ -288,6 +288,98 @@ object DownloadFileModify {
         return DeleteOutcome.Failed
     }
 
+    /**
+     * Șterge un director public (ex. Download/DLPulse/sport/relax) cu tot conținutul:
+     * media, coperti .jpg, .dlpulse.json, subfoldere.
+     * Cu „Acces la toate fișierele” folosește deleteRecursively; altfel MediaStore + File.
+     */
+    fun deleteDirectoryTree(context: Context, dir: File): DeleteOutcome {
+        if (!dir.exists()) return DeleteOutcome.Success
+        if (!dir.isDirectory) return DeleteOutcome.Failed
+
+        if (AppStartupPermissions.canManageAllFiles()) {
+            val parentPath = dir.parentFile?.absolutePath
+            if (dir.deleteRecursively() || !dir.exists()) {
+                parentPath?.let { scanPath(context, it) }
+                DownloadMetadata.clearCache()
+                return DeleteOutcome.Success
+            }
+        }
+
+        val allFiles = mutableListOf<File>()
+        fun collectFiles(d: File) {
+            val children = d.listFiles() ?: return
+            for (child in children) {
+                when {
+                    child.isDirectory -> collectFiles(child)
+                    child.isFile -> allFiles.add(child)
+                }
+            }
+        }
+        collectFiles(dir)
+
+        val urisNeedingConsent = linkedSetOf<Uri>()
+        for (f in allFiles) {
+            if (!f.exists()) continue
+            if (f.delete()) {
+                scanPath(context, f.absolutePath)
+                continue
+            }
+            val uri = lookupMediaUriBroad(context, f)
+            if (uri == null) {
+                // Nu putem șterge și nici găsi MediaStore — lăsăm pentru retry după consent batch.
+                continue
+            }
+            when (val r = deleteMediaRow(context, uri)) {
+                is DeleteOutcome.Success -> {
+                    runCatching { if (f.exists()) f.delete() }
+                    scanPath(context, f.absolutePath)
+                }
+                is DeleteOutcome.NeedsUserConsent -> urisNeedingConsent.add(uri)
+                is DeleteOutcome.Failed -> urisNeedingConsent.add(uri)
+            }
+        }
+
+        if (urisNeedingConsent.isNotEmpty()) {
+            createDeleteRequestSender(context, urisNeedingConsent.toList())?.let {
+                return DeleteOutcome.NeedsUserConsent(it)
+            }
+        }
+
+        // Curăță ce a rămas pe disc (sidecar-uri / fișiere după MediaStore).
+        fun wipeEmpty(d: File): Boolean {
+            val children = d.listFiles() ?: return d.delete() || !d.exists()
+            for (child in children) {
+                when {
+                    child.isDirectory -> if (!wipeEmpty(child)) return false
+                    child.isFile -> {
+                        if (!child.delete()) {
+                            val uri = lookupMediaUriBroad(context, child)
+                            if (uri != null) {
+                                when (deleteMediaRow(context, uri)) {
+                                    is DeleteOutcome.Success -> runCatching { child.delete() }
+                                    is DeleteOutcome.NeedsUserConsent -> return false
+                                    is DeleteOutcome.Failed -> if (child.exists()) return false
+                                }
+                            } else if (child.exists()) {
+                                return false
+                            }
+                        }
+                    }
+                }
+            }
+            return d.delete() || !d.exists()
+        }
+
+        return if (wipeEmpty(dir) || !dir.exists()) {
+            DownloadMetadata.clearCache()
+            dir.parentFile?.absolutePath?.let { scanPath(context, it) }
+            DeleteOutcome.Success
+        } else {
+            DeleteOutcome.Failed
+        }
+    }
+
     private fun deleteAssociatedSidecars(context: Context, entry: DownloadedFileEntry) {
         DownloadMetadata.resolveSidecarFiles(context, entry).forEach { sidecar ->
             if (sidecar.exists()) {

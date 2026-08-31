@@ -545,7 +545,8 @@ object DownloadsIndex {
     }
 
     /**
-     * Șterge un subfolder din Download/DLPulse și tot conținutul (media + sidecar-uri).
+     * Șterge un subfolder din Download/DLPulse și tot conținutul
+     * (media, coperti, metadata JSON, subfoldere).
      */
     fun deleteDlpulseSubfolder(
         context: Context,
@@ -559,35 +560,13 @@ object DownloadsIndex {
         )
         val parentDir = safeResolvedDirectory(baseDir, rel) ?: return FolderDeleteOutcome.Failed
         val target = File(parentDir, folderName)
+        if (!target.exists()) return FolderDeleteOutcome.Success
         if (!target.isDirectory) return FolderDeleteOutcome.Failed
-        val folderRel = if (rel.isEmpty()) folderName else "$rel/$folderName"
-        val listing = listPublicDlpulseDirectory(context, folderRel)
-        val pendingConsent = mutableListOf<android.content.IntentSender>()
-        for (sub in listing.subfolders) {
-            when (val subResult = deleteDlpulseSubfolder(context, folderRel, sub)) {
-                is FolderDeleteOutcome.Failed -> return FolderDeleteOutcome.Failed
-                is FolderDeleteOutcome.NeedsUserConsent ->
-                    pendingConsent.add(subResult.intentSender)
-                is FolderDeleteOutcome.Success -> Unit
-            }
-        }
-        for (entry in listing.files) {
-            when (val r = DownloadFileModify.delete(context, entry)) {
-                is DownloadFileModify.DeleteOutcome.Success -> Unit
-                is DownloadFileModify.DeleteOutcome.NeedsUserConsent ->
-                    pendingConsent.add(r.intentSender)
-                is DownloadFileModify.DeleteOutcome.Failed ->
-                    return FolderDeleteOutcome.Failed
-            }
-        }
-        if (pendingConsent.isNotEmpty()) {
-            return FolderDeleteOutcome.NeedsUserConsent(pendingConsent.first())
-        }
-        return if (target.delete()) {
-            DownloadMetadata.clearCache()
-            FolderDeleteOutcome.Success
-        } else {
-            FolderDeleteOutcome.Failed
+        return when (val r = DownloadFileModify.deleteDirectoryTree(context, target)) {
+            is DownloadFileModify.DeleteOutcome.Success -> FolderDeleteOutcome.Success
+            is DownloadFileModify.DeleteOutcome.NeedsUserConsent ->
+                FolderDeleteOutcome.NeedsUserConsent(r.intentSender)
+            is DownloadFileModify.DeleteOutcome.Failed -> FolderDeleteOutcome.Failed
         }
     }
 }

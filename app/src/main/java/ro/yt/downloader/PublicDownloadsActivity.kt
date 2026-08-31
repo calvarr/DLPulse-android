@@ -201,12 +201,19 @@ class PublicDownloadsActivity : AppCompatActivity() {
                 pending.entry,
                 allowConsentRetry = false
             )
-            is PendingMediaConsent.DeleteFolder -> applyFolderDeleteOutcome(
-                deleteBrowseFolder(pending.parentRel, pending.folderName),
-                pending.parentRel,
-                pending.folderName,
-                allowConsentRetry = false
-            )
+            is PendingMediaConsent.DeleteFolder -> {
+                Thread {
+                    val outcome = deleteBrowseFolder(pending.parentRel, pending.folderName)
+                    runOnUiThread {
+                        applyFolderDeleteOutcome(
+                            outcome,
+                            pending.parentRel,
+                            pending.folderName,
+                            allowConsentRetry = false
+                        )
+                    }
+                }.start()
+            }
             is PendingMediaConsent.Move -> applyMoveOutcome(
                 DownloadFileModify.moveToDlpulseSubfolder(this, pending.entry, pending.destRel),
                 pending.entry,
@@ -1195,12 +1202,17 @@ class PublicDownloadsActivity : AppCompatActivity() {
                     BrowseLocation.DLPULSE -> browseRelativePath
                     BrowseLocation.SAF_LIBRARY -> safPathSegments.joinToString("/")
                 }
-                applyFolderDeleteOutcome(
-                    deleteBrowseFolder(parentRel, folderName),
-                    parentRel,
-                    folderName,
-                    allowConsentRetry = true
-                )
+                Thread {
+                    val outcome = deleteBrowseFolder(parentRel, folderName)
+                    runOnUiThread {
+                        applyFolderDeleteOutcome(
+                            outcome,
+                            parentRel,
+                            folderName,
+                            allowConsentRetry = true
+                        )
+                    }
+                }.start()
             }
             .setNegativeButton(R.string.main_cancel, null)
             .show()
@@ -1241,7 +1253,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
             is FolderDeleteOutcome.NeedsUserConsent -> {
                 if (!allowConsentRetry) {
                     reloadFromDisk(clearSelection = false)
-                    Toast.makeText(this, R.string.browse_delete_folder_done, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.browse_delete_folder_failed, Toast.LENGTH_LONG).show()
                     return
                 }
                 requestMediaModifyConsent(
