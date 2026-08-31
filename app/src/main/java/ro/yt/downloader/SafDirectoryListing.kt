@@ -22,7 +22,7 @@ object SafDirectoryListing {
         }
         val folders = mutableListOf<String>()
         val files = mutableListOf<DownloadedFileEntry>()
-        val childDocs = dir.listFiles()
+        val childDocs = dir.listFiles() ?: emptyArray()
         val siblingNames = childDocs.filter { it.isFile }.mapNotNull { it.name }.toSet()
         for (child in childDocs) {
             val name = child.name ?: continue

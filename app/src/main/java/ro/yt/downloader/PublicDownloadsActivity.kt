@@ -373,7 +373,9 @@ class PublicDownloadsActivity : AppCompatActivity() {
         castBarSeekFwd = findViewById(R.id.castBarSeekFwd)
         castBarDisconnect = findViewById(R.id.castBarDisconnect)
         if (castContext != null) {
-            CastRouteUi.setUpMediaRouteButton(this, findViewById(R.id.castRouteButtonDownloads))
+            runCatching {
+                CastRouteUi.setUpMediaRouteButton(this, findViewById(R.id.castRouteButtonDownloads))
+            }
             castBarPlayPause.setOnClickListener {
                 CastPlaybackHelper.togglePlayPause(this)
                 CastStreamService.instance?.refreshMediaNotification()
@@ -799,56 +801,33 @@ class PublicDownloadsActivity : AppCompatActivity() {
         Toast.makeText(this, R.string.cast_projection_closed, Toast.LENGTH_LONG).show()
     }
 
+    private var reloadGeneration = 0
+
     private fun reloadFromDisk(clearSelection: Boolean = true) {
-        DownloadMetadata.clearCache()
+        val reloadToken = ++reloadGeneration
         Thread {
-            when (browseLocation) {
-                BrowseLocation.SAF_LIBRARY -> {
-                    var tree = safTreeUri ?: browsePrefs.getSafTreeUri()?.also { safTreeUri = it }
-                    if (tree == null) {
-                        runOnUiThread {
-                            browseLocation = BrowseLocation.DLPULSE
-                            if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
-                            updateToolbarBrowseSubtitle()
-                            reloadFromDisk(clearSelection)
+            try {
+                when (browseLocation) {
+                    BrowseLocation.SAF_LIBRARY -> {
+                        var tree = safTreeUri ?: browsePrefs.getSafTreeUri()?.also { safTreeUri = it }
+                        if (tree == null) {
+                            runOnUiThread {
+                                if (reloadToken != reloadGeneration) return@runOnUiThread
+                                browseLocation = BrowseLocation.DLPULSE
+                                if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
+                                updateToolbarBrowseSubtitle()
+                                reloadFromDisk(clearSelection)
+                            }
+                            return@Thread
                         }
-                        return@Thread
-                    }
-                    safTreeUri = tree
-                    val listing = SafDirectoryListing.list(
-                        this@PublicDownloadsActivity,
-                        tree,
-                        safPathSegments.toList()
-                    )
-                    preloadMetadataCache(listing.files)
-                    runOnUiThread {
-                        subfoldersInDir = listing.subfolders
-                        allEntries = listing.files
-                        if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
-                        updateToolbarBrowseSubtitle()
-                        applyFilter()
-                        updateSelectionUi()
-                    }
-                }
-                BrowseLocation.DLPULSE -> {
-                    if (flatViewAllFiles) {
-                        val list = DownloadsIndex.listPublicDlpulseOnly(this@PublicDownloadsActivity)
-                        preloadMetadataCache(list)
-                        runOnUiThread {
-                            subfoldersInDir = emptyList()
-                            allEntries = list
-                            if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
-                            updateToolbarBrowseSubtitle()
-                            applyFilter()
-                            updateSelectionUi()
-                        }
-                    } else {
-                        val listing = DownloadsIndex.listPublicDlpulseDirectory(
-                            this@PublicDownloadsActivity,
-                            browseRelativePath
+                        safTreeUri = tree
+                        val listing = SafDirectoryListing.list(
+                            applicationContext,
+                            tree,
+                            safPathSegments.toList()
                         )
-                        preloadMetadataCache(listing.files)
                         runOnUiThread {
+                            if (reloadToken != reloadGeneration) return@runOnUiThread
                             subfoldersInDir = listing.subfolders
                             allEntries = listing.files
                             if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
@@ -857,13 +836,45 @@ class PublicDownloadsActivity : AppCompatActivity() {
                             updateSelectionUi()
                         }
                     }
+                    BrowseLocation.DLPULSE -> {
+                        if (flatViewAllFiles) {
+                            val list = DownloadsIndex.listPublicDlpulseOnly(applicationContext)
+                            runOnUiThread {
+                                if (reloadToken != reloadGeneration) return@runOnUiThread
+                                subfoldersInDir = emptyList()
+                                allEntries = list
+                                if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
+                                updateToolbarBrowseSubtitle()
+                                applyFilter()
+                                updateSelectionUi()
+                            }
+                        } else {
+                            val listing = DownloadsIndex.listPublicDlpulseDirectory(
+                                applicationContext,
+                                browseRelativePath
+                            )
+                            runOnUiThread {
+                                if (reloadToken != reloadGeneration) return@runOnUiThread
+                                subfoldersInDir = listing.subfolders
+                                allEntries = listing.files
+                                if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
+                                updateToolbarBrowseSubtitle()
+                                applyFilter()
+                                updateSelectionUi()
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    if (reloadToken != reloadGeneration) return@runOnUiThread
+                    subfoldersInDir = emptyList()
+                    allEntries = emptyList()
+                    applyFilter()
+                    updateSelectionUi()
                 }
             }
         }.start()
-    }
-
-    private fun preloadMetadataCache(entries: List<DownloadedFileEntry>) {
-        entries.forEach { DownloadMetadata.load(this, it) }
     }
 
     private fun pruneStaleSelectionKeys() {
@@ -1057,10 +1068,10 @@ class PublicDownloadsActivity : AppCompatActivity() {
         } else {
             allEntries.filter { entry ->
                 if (entry.title.lowercase().contains(q)) return@filter true
-                val meta = DownloadMetadata.load(this, entry)
-                meta?.title?.lowercase()?.contains(q) == true ||
-                    meta?.subtitle()?.lowercase()?.contains(q) == true ||
-                    meta?.primaryCreator()?.lowercase()?.contains(q) == true
+                val meta = DownloadMetadata.peekCached(entry) ?: return@filter false
+                meta.title?.lowercase()?.contains(q) == true ||
+                    meta.subtitle()?.lowercase()?.contains(q) == true ||
+                    meta.primaryCreator()?.lowercase()?.contains(q) == true
             }
         }
         val fileRows = filteredFiles.map { BrowseRow.FileRow(it) }
@@ -1803,8 +1814,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
                     checkbox.isChecked = !checkbox.isChecked
                 }
 
-                Thread {
-                    val info = DownloadMetadata.load(this@PublicDownloadsActivity, entry)
+                DownloadMetadata.loadAsync(this@PublicDownloadsActivity, entry) { info ->
+                    if (isDestroyed || isFinishing) return@loadAsync
                     val displayTitle = info?.title?.takeIf { it.isNotBlank() }
                         ?: entry.title.substringBeforeLast('.').ifBlank { entry.title }
                     val subtitle = info?.subtitle()
@@ -1812,21 +1823,20 @@ class PublicDownloadsActivity : AppCompatActivity() {
                         DownloadArtwork.formatDurationMs(it * 1000L)
                     }
                     runOnUiThread {
-                        if (!isFinishing && meta.tag == key) {
-                            title.text = displayTitle
-                            if (!subtitle.isNullOrBlank()) {
-                                meta.text = subtitle
-                                meta.visibility = View.VISIBLE
-                            } else {
-                                meta.visibility = View.GONE
-                            }
-                            if (durationText != null) {
-                                duration.text = durationText
-                                duration.visibility = View.VISIBLE
-                            }
+                        if (isDestroyed || isFinishing || meta.tag != key) return@runOnUiThread
+                        title.text = displayTitle
+                        if (!subtitle.isNullOrBlank()) {
+                            meta.text = subtitle
+                            meta.visibility = View.VISIBLE
+                        } else {
+                            meta.visibility = View.GONE
+                        }
+                        if (durationText != null) {
+                            duration.text = durationText
+                            duration.visibility = View.VISIBLE
                         }
                     }
-                }.start()
+                }
             }
         }
     }

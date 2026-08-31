@@ -10,6 +10,7 @@ import org.json.JSONObject
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 
 data class MediaMetadataInfo(
     val title: String? = null,
@@ -56,6 +57,25 @@ object DownloadMetadata {
     private const val SUBFOLDER = "DLPulse"
 
     private val cache = ConcurrentHashMap<String, MediaMetadataInfo?>()
+    private val io = Executors.newSingleThreadExecutor()
+
+    fun loadAsync(
+        context: Context,
+        entry: DownloadedFileEntry,
+        onResult: (MediaMetadataInfo?) -> Unit
+    ) {
+        val appCtx = context.applicationContext
+        val key = entry.stableKey()
+        cache[key]?.let {
+            onResult(it)
+            return
+        }
+        io.execute {
+            val loaded = runCatching { loadUncached(appCtx, entry) }.getOrNull()
+            cache[key] = loaded
+            onResult(loaded)
+        }
+    }
 
     fun isMetadataSidecar(name: String): Boolean {
         val lower = name.lowercase(Locale.ROOT)
@@ -78,12 +98,17 @@ object DownloadMetadata {
     }
 
     fun load(context: Context, entry: DownloadedFileEntry): MediaMetadataInfo? {
+        val appCtx = context.applicationContext
         val key = entry.stableKey()
         cache[key]?.let { return it }
-        val loaded = loadUncached(context, entry)
+        val loaded = loadUncached(appCtx, entry)
         cache[key] = loaded
         return loaded
     }
+
+    /** Doar din cache — sigur pe UI thread (filtru, bind rapid). */
+    fun peekCached(entry: DownloadedFileEntry): MediaMetadataInfo? =
+        cache[entry.stableKey()]
 
     fun invalidateCache(key: String) {
         cache.remove(key)
@@ -94,16 +119,16 @@ object DownloadMetadata {
     }
 
     private fun loadUncached(context: Context, entry: DownloadedFileEntry): MediaMetadataInfo? {
-        resolveMediaFile(context, entry)?.let { media ->
-            findJsonBeside(media)?.let { json ->
-                loadFromFile(json)?.let { return it }
-            }
-        }
-        return loadFromRetriever(context, entry)
+        return runCatching {
+            resolveMediaFile(context, entry)?.let { media ->
+                findJsonBeside(media)?.let { json -> loadFromFile(json) }
+            } ?: loadFromRetriever(context, entry)
+        }.getOrNull()
     }
 
     fun loadFromFile(file: File): MediaMetadataInfo? {
         return runCatching {
+            if (!file.isFile || file.length() <= 0L || file.length() > 2_000_000L) return null
             val json = JSONObject(file.readText())
             if (file.name.lowercase(Locale.ROOT).endsWith(INFO_JSON_SUFFIX)) {
                 fromYtdlpInfoJson(json)
