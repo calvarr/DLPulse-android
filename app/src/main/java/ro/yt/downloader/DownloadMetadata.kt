@@ -142,9 +142,11 @@ object DownloadMetadata {
 
     private fun loadUncached(context: Context, entry: DownloadedFileEntry): MediaMetadataInfo? {
         return runCatching {
-            resolveMediaFile(context, entry)?.let { media ->
-                findJsonBeside(media)?.let { json -> loadFromFile(json) }
-            } ?: loadFromRetriever(context, entry)
+            val media = resolveMediaFile(context, entry)
+            if (media != null) {
+                findJsonBeside(media)?.let { json -> loadFromFile(json) }?.let { return@runCatching it }
+            }
+            loadFromRetriever(context, entry)
         }.getOrNull()
     }
 

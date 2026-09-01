@@ -1802,18 +1802,17 @@ class PublicDownloadsActivity : AppCompatActivity() {
 
         inner class FileVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val checkbox: CheckBox = itemView.findViewById(R.id.rowCheckbox)
+            private val thumb: ImageView = itemView.findViewById(R.id.rowThumb)
+            private val duration: TextView = itemView.findViewById(R.id.rowDuration)
             private val title: TextView = itemView.findViewById(R.id.rowFileTitle)
             private val meta: TextView = itemView.findViewById(R.id.rowFileMeta)
-            private val duration: TextView = itemView.findViewById(R.id.rowDuration)
             private val more: ImageButton = itemView.findViewById(R.id.btnRowMore)
 
             fun bind(entry: DownloadedFileEntry) {
                 val key = entry.stableKey()
                 title.text = entry.title.substringBeforeLast('.').ifBlank { entry.title }
                 meta.visibility = View.GONE
-                duration.visibility = View.GONE
                 meta.tag = key
-                duration.tag = key
                 more.setOnClickListener { showFileMenu(entry, more) }
 
                 checkbox.setOnCheckedChangeListener(null)
@@ -1825,8 +1824,16 @@ class PublicDownloadsActivity : AppCompatActivity() {
                 title.setOnClickListener {
                     checkbox.isChecked = !checkbox.isChecked
                 }
+                thumb.setOnClickListener {
+                    checkbox.isChecked = !checkbox.isChecked
+                }
 
-                // Metadata e opțională — orice eșec nu trebuie să închidă browserul.
+                // Thumbnail + durată (sidecar .jpg / artwork / frame).
+                runCatching {
+                    DownloadArtwork.bind(thumb, duration, entry, R.drawable.ic_action_play)
+                }
+
+                // Autor / artist / album din .dlpulse.json sau tag-uri media.
                 runCatching {
                     DownloadMetadata.loadAsync(this@PublicDownloadsActivity, entry) { info ->
                         if (isDestroyed || isFinishing) return@loadAsync
@@ -1845,7 +1852,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
                             } else {
                                 meta.visibility = View.GONE
                             }
-                            if (durationText != null) {
+                            // Completează durata dacă artwork nu a reușit încă.
+                            if (durationText != null && duration.visibility != View.VISIBLE) {
                                 duration.text = durationText
                                 duration.visibility = View.VISIBLE
                             }

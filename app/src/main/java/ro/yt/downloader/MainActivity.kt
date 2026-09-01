@@ -1156,6 +1156,7 @@ class MainActivity : AppCompatActivity() {
                 val uri = Uri.parse(uriStr)
                 var ok = 0
                 for (f in media) {
+                    DownloadMetadata.ingestInfoJsonBeside(f)
                     if (UserFolderExporter.copyFileToTree(this, uri, f)) {
                         ok++
                         DownloadArtwork.findSidecarBeside(f)?.let { thumb ->
