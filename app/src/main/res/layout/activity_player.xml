@@ -47,13 +47,15 @@
                 android:layout_height="1dp"
                 android:layout_weight="1" />
 
-            <androidx.mediarouter.app.MediaRouteButton
+            <ImageButton
                 android:id="@+id/playerCastRouteButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:mediaRouteTypes="user"
-                android:minWidth="48dp"
-                android:minHeight="48dp" />
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_menu_cast_file"
+                android:padding="10dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_action_cast" />
         </LinearLayout>
 
         <LinearLayout

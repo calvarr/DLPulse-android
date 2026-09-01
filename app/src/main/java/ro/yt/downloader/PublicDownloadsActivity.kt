@@ -16,7 +16,6 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
@@ -26,15 +25,18 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import android.provider.DocumentsContract
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import java.io.File
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -125,6 +127,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
 
     private var castPlaylist: CastPlaylistState? = null
     private var castMediaCallback: RemoteMediaClient.Callback? = null
+    private var amazonCastSession: AmazonCastSession? = null
 
     private val castStateListener = CastStateListener {
         invalidateOptionsMenu()
@@ -171,6 +174,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
      */
     private sealed class PendingMediaConsent {
         data class Delete(val entry: DownloadedFileEntry) : PendingMediaConsent()
+        data class DeleteFolder(val parentRel: String, val folderName: String) : PendingMediaConsent()
         data class Move(val entry: DownloadedFileEntry, val destRel: String) : PendingMediaConsent()
         data class Rename(val entry: DownloadedFileEntry, val newName: String) : PendingMediaConsent()
     }
@@ -197,6 +201,19 @@ class PublicDownloadsActivity : AppCompatActivity() {
                 pending.entry,
                 allowConsentRetry = false
             )
+            is PendingMediaConsent.DeleteFolder -> {
+                Thread {
+                    val outcome = deleteBrowseFolder(pending.parentRel, pending.folderName)
+                    runOnUiThread {
+                        applyFolderDeleteOutcome(
+                            outcome,
+                            pending.parentRel,
+                            pending.folderName,
+                            allowConsentRetry = false
+                        )
+                    }
+                }.start()
+            }
             is PendingMediaConsent.Move -> applyMoveOutcome(
                 DownloadFileModify.moveToDlpulseSubfolder(this, pending.entry, pending.destRel),
                 pending.entry,
@@ -354,9 +371,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
         )
 
         castContext = runCatching { CastContext.getSharedInstance(this) }.getOrNull()
-        if (castContext == null) {
-            btnSelectionCast.visibility = View.GONE
-        }
+        // Cast rămâne vizibil și fără Play Services: Amazon Fire TV (DLNA) nu depinde de Cast SDK.
 
         castPlaybackBar = findViewById(R.id.castPlaybackBar)
         castPlaybackTitle = findViewById(R.id.castPlaybackTitle)
@@ -365,7 +380,9 @@ class PublicDownloadsActivity : AppCompatActivity() {
         castBarSeekFwd = findViewById(R.id.castBarSeekFwd)
         castBarDisconnect = findViewById(R.id.castBarDisconnect)
         if (castContext != null) {
-            CastRouteUi.setUpMediaRouteButton(this, findViewById(R.id.castRouteButtonDownloads))
+            runCatching {
+                CastRouteUi.setUpMediaRouteButton(this, findViewById(R.id.castRouteButtonDownloads))
+            }
             castBarPlayPause.setOnClickListener {
                 CastPlaybackHelper.togglePlayPause(this)
                 CastStreamService.instance?.refreshMediaNotification()
@@ -439,7 +456,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val connected = castContext?.sessionManager?.currentCastSession?.isConnected == true
+        val connected = castContext?.sessionManager?.currentCastSession?.isConnected == true ||
+            amazonCastSession != null
         menu.findItem(R.id.action_disconnect_cast)?.isVisible = connected
         menu.findItem(R.id.action_browse_flat_toggle)?.title = getString(
             if (flatViewAllFiles) R.string.menu_browse_show_folders
@@ -544,6 +562,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
     override fun onDestroy() {
         pendingLoadRunnable?.let { mainHandler.removeCallbacks(it) }
         pendingLoadRunnable = null
+        amazonCastSession?.stop()
+        amazonCastSession = null
         unregisterCastMediaCallback()
         val connected = castContext?.sessionManager?.currentCastSession?.isConnected == true
         if (!connected) {
@@ -770,6 +790,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
         castPlaylist = null
         pendingLoadRunnable?.let { mainHandler.removeCallbacks(it) }
         pendingLoadRunnable = null
+        amazonCastSession?.stop()
+        amazonCastSession = null
         LocalStreamHolder.stop()
         CastStreamService.stop(this)
         unregisterCastMediaCallback()
@@ -786,52 +808,33 @@ class PublicDownloadsActivity : AppCompatActivity() {
         Toast.makeText(this, R.string.cast_projection_closed, Toast.LENGTH_LONG).show()
     }
 
+    private var reloadGeneration = 0
+
     private fun reloadFromDisk(clearSelection: Boolean = true) {
+        val reloadToken = ++reloadGeneration
         Thread {
-            when (browseLocation) {
-                BrowseLocation.SAF_LIBRARY -> {
-                    var tree = safTreeUri ?: browsePrefs.getSafTreeUri()?.also { safTreeUri = it }
-                    if (tree == null) {
-                        runOnUiThread {
-                            browseLocation = BrowseLocation.DLPULSE
-                            if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
-                            updateToolbarBrowseSubtitle()
-                            reloadFromDisk(clearSelection)
+            try {
+                when (browseLocation) {
+                    BrowseLocation.SAF_LIBRARY -> {
+                        var tree = safTreeUri ?: browsePrefs.getSafTreeUri()?.also { safTreeUri = it }
+                        if (tree == null) {
+                            runOnUiThread {
+                                if (reloadToken != reloadGeneration) return@runOnUiThread
+                                browseLocation = BrowseLocation.DLPULSE
+                                if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
+                                updateToolbarBrowseSubtitle()
+                                reloadFromDisk(clearSelection)
+                            }
+                            return@Thread
                         }
-                        return@Thread
-                    }
-                    safTreeUri = tree
-                    val listing = SafDirectoryListing.list(
-                        this@PublicDownloadsActivity,
-                        tree,
-                        safPathSegments.toList()
-                    )
-                    runOnUiThread {
-                        subfoldersInDir = listing.subfolders
-                        allEntries = listing.files
-                        if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
-                        updateToolbarBrowseSubtitle()
-                        applyFilter()
-                        updateSelectionUi()
-                    }
-                }
-                BrowseLocation.DLPULSE -> {
-                    if (flatViewAllFiles) {
-                        val list = DownloadsIndex.listPublicDlpulseOnly(this@PublicDownloadsActivity)
-                        runOnUiThread {
-                            subfoldersInDir = emptyList()
-                            allEntries = list
-                            if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
-                            updateToolbarBrowseSubtitle()
-                            applyFilter()
-                            updateSelectionUi()
-                        }
-                    } else {
-                        val listing = DownloadsIndex.listPublicDlpulseDirectory(
-                            this@PublicDownloadsActivity,
-                            browseRelativePath
+                        safTreeUri = tree
+                        val listing = SafDirectoryListing.list(
+                            applicationContext,
+                            tree,
+                            safPathSegments.toList()
                         )
                         runOnUiThread {
+                            if (reloadToken != reloadGeneration) return@runOnUiThread
                             subfoldersInDir = listing.subfolders
                             allEntries = listing.files
                             if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
@@ -840,6 +843,42 @@ class PublicDownloadsActivity : AppCompatActivity() {
                             updateSelectionUi()
                         }
                     }
+                    BrowseLocation.DLPULSE -> {
+                        if (flatViewAllFiles) {
+                            val list = DownloadsIndex.listPublicDlpulseOnly(applicationContext)
+                            runOnUiThread {
+                                if (reloadToken != reloadGeneration) return@runOnUiThread
+                                subfoldersInDir = emptyList()
+                                allEntries = list
+                                if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
+                                updateToolbarBrowseSubtitle()
+                                applyFilter()
+                                updateSelectionUi()
+                            }
+                        } else {
+                            val listing = DownloadsIndex.listPublicDlpulseDirectory(
+                                applicationContext,
+                                browseRelativePath
+                            )
+                            runOnUiThread {
+                                if (reloadToken != reloadGeneration) return@runOnUiThread
+                                subfoldersInDir = listing.subfolders
+                                allEntries = listing.files
+                                if (clearSelection) selectedKeys.clear() else pruneStaleSelectionKeys()
+                                updateToolbarBrowseSubtitle()
+                                applyFilter()
+                                updateSelectionUi()
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    if (reloadToken != reloadGeneration) return@runOnUiThread
+                    subfoldersInDir = emptyList()
+                    allEntries = emptyList()
+                    applyFilter()
+                    updateSelectionUi()
                 }
             }
         }.start()
@@ -1034,7 +1073,13 @@ class PublicDownloadsActivity : AppCompatActivity() {
         val filteredFiles = if (q.isEmpty()) {
             allEntries
         } else {
-            allEntries.filter { it.title.lowercase().contains(q) }
+            allEntries.filter { entry ->
+                if (entry.title.lowercase().contains(q)) return@filter true
+                val meta = DownloadMetadata.peekCached(entry) ?: return@filter false
+                meta.title?.lowercase()?.contains(q) == true ||
+                    meta.subtitle()?.lowercase()?.contains(q) == true ||
+                    meta.primaryCreator()?.lowercase()?.contains(q) == true
+            }
         }
         val fileRows = filteredFiles.map { BrowseRow.FileRow(it) }
         displayedBrowseRows = folderRows + fileRows
@@ -1064,46 +1109,54 @@ class PublicDownloadsActivity : AppCompatActivity() {
     }
 
     private fun showFileMenu(entry: DownloadedFileEntry, anchor: View) {
-        val popup = PopupMenu(this, anchor, Gravity.END)
-        popup.menuInflater.inflate(R.menu.menu_download_file, popup.menu)
-        forcePopupMenuIcons(popup)
-        applyFileMenuIconOnly(popup.menu)
-        if (castContext == null) {
-            popup.menu.findItem(R.id.action_cast_file)?.isVisible = false
+        val content = layoutInflater.inflate(R.layout.popup_file_actions, null)
+        val popup = PopupWindow(
+            content,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        ).apply {
+            elevation = 10f * resources.displayMetrics.density
+            isOutsideTouchable = true
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         }
-        popup.menu.findItem(R.id.action_rename_file)?.isVisible =
-            browseLocation != BrowseLocation.SAF_LIBRARY
-        popup.menu.findItem(R.id.action_move_file)?.isVisible = true
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.action_play_file -> {
-                    DownloadFileActions.openPlayerInApp(this, entry)
-                    true
-                }
-                R.id.action_share_file -> {
-                    DownloadFileActions.share(this, entry)
-                    true
-                }
-                R.id.action_cast_file -> {
-                    startCastPlaylist(listOf(entry))
-                    true
-                }
-                R.id.action_rename_file -> {
-                    showRenameFileDialog(entry)
-                    true
-                }
-                R.id.action_move_file -> {
-                    showMoveFileDialog(entry)
-                    true
-                }
-                R.id.action_delete_file -> {
-                    showDeleteFileDialog(entry)
-                    true
-                }
-                else -> false
+
+        fun dismissAnd(action: () -> Unit) {
+            popup.dismiss()
+            action()
+        }
+
+        content.findViewById<ImageButton>(R.id.popupPlay).setOnClickListener {
+            dismissAnd { DownloadFileActions.openPlayerInApp(this, entry) }
+        }
+        content.findViewById<ImageButton>(R.id.popupShare).setOnClickListener {
+            dismissAnd { DownloadFileActions.share(this, entry) }
+        }
+        // Cast mereu vizibil: Chromecast și/sau Amazon DLNA (alegere în dialog).
+        content.findViewById<ImageButton>(R.id.popupCast).setOnClickListener {
+            dismissAnd { startCastPlaylist(listOf(entry)) }
+        }
+        val renameBtn = content.findViewById<ImageButton>(R.id.popupRename)
+        if (browseLocation == BrowseLocation.SAF_LIBRARY) {
+            renameBtn.visibility = View.GONE
+        } else {
+            renameBtn.setOnClickListener {
+                dismissAnd { showRenameFileDialog(entry) }
             }
         }
-        popup.show()
+        content.findViewById<ImageButton>(R.id.popupMove).setOnClickListener {
+            dismissAnd { showMoveFileDialog(entry) }
+        }
+        content.findViewById<ImageButton>(R.id.popupDelete).setOnClickListener {
+            dismissAnd { showDeleteFileDialog(entry) }
+        }
+
+        content.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val xOff = (anchor.width - content.measuredWidth).coerceAtMost(0)
+        popup.showAsDropDown(anchor, xOff, 0)
     }
 
     private fun showRenameFileDialog(entry: DownloadedFileEntry) {
@@ -1138,6 +1191,81 @@ class PublicDownloadsActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.main_cancel, null)
             .show()
+    }
+
+    private fun showDeleteFolderDialog(folderName: String) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.browse_delete_folder_confirm_title)
+            .setMessage(getString(R.string.browse_delete_folder_confirm_message, folderName))
+            .setPositiveButton(R.string.browse_delete) { _, _ ->
+                val parentRel = when (browseLocation) {
+                    BrowseLocation.DLPULSE -> browseRelativePath
+                    BrowseLocation.SAF_LIBRARY -> safPathSegments.joinToString("/")
+                }
+                Thread {
+                    val outcome = deleteBrowseFolder(parentRel, folderName)
+                    runOnUiThread {
+                        applyFolderDeleteOutcome(
+                            outcome,
+                            parentRel,
+                            folderName,
+                            allowConsentRetry = true
+                        )
+                    }
+                }.start()
+            }
+            .setNegativeButton(R.string.main_cancel, null)
+            .show()
+    }
+
+    private fun deleteBrowseFolder(parentRel: String, folderName: String): FolderDeleteOutcome {
+        return when (browseLocation) {
+            BrowseLocation.DLPULSE ->
+                DownloadsIndex.deleteDlpulseSubfolder(this, parentRel, folderName)
+            BrowseLocation.SAF_LIBRARY -> {
+                val tree = safTreeUri ?: return FolderDeleteOutcome.Failed
+                if (SafDirectoryListing.deleteFolder(
+                        this,
+                        tree,
+                        safPathSegments.toList(),
+                        folderName
+                    )
+                ) {
+                    FolderDeleteOutcome.Success
+                } else {
+                    FolderDeleteOutcome.Failed
+                }
+            }
+        }
+    }
+
+    private fun applyFolderDeleteOutcome(
+        outcome: FolderDeleteOutcome,
+        parentRel: String,
+        folderName: String,
+        allowConsentRetry: Boolean
+    ) {
+        when (outcome) {
+            is FolderDeleteOutcome.Success -> {
+                reloadFromDisk(clearSelection = false)
+                Toast.makeText(this, R.string.browse_delete_folder_done, Toast.LENGTH_SHORT).show()
+            }
+            is FolderDeleteOutcome.NeedsUserConsent -> {
+                if (!allowConsentRetry) {
+                    reloadFromDisk(clearSelection = false)
+                    Toast.makeText(this, R.string.browse_delete_folder_failed, Toast.LENGTH_LONG).show()
+                    return
+                }
+                requestMediaModifyConsent(
+                    outcome.intentSender,
+                    PendingMediaConsent.DeleteFolder(parentRel, folderName),
+                    R.string.browse_delete_folder_failed
+                )
+            }
+            is FolderDeleteOutcome.Failed -> {
+                Toast.makeText(this, R.string.browse_delete_folder_failed, Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun showDeleteFileDialog(entry: DownloadedFileEntry) {
@@ -1336,56 +1464,6 @@ class PublicDownloadsActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun applyFileMenuIconOnly(menu: Menu) {
-        menu.findItem(R.id.action_play_file)?.let { item ->
-            item.setTitle("")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                item.contentDescription = getString(R.string.cd_menu_play_file)
-            }
-        }
-        menu.findItem(R.id.action_share_file)?.let { item ->
-            item.setTitle("")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                item.contentDescription = getString(R.string.cd_menu_share_file)
-            }
-        }
-        menu.findItem(R.id.action_cast_file)?.let { item ->
-            item.setTitle("")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                item.contentDescription = getString(R.string.cd_menu_cast_file)
-            }
-        }
-        menu.findItem(R.id.action_rename_file)?.let { item ->
-            item.setTitle("")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                item.contentDescription = getString(R.string.cd_menu_rename_file)
-            }
-        }
-        menu.findItem(R.id.action_move_file)?.let { item ->
-            item.setTitle("")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                item.contentDescription = getString(R.string.cd_menu_move_file)
-            }
-        }
-        menu.findItem(R.id.action_delete_file)?.let { item ->
-            item.setTitle("")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                item.contentDescription = getString(R.string.cd_menu_delete_file)
-            }
-        }
-    }
-
-    private fun forcePopupMenuIcons(popup: PopupMenu) {
-        try {
-            val f = PopupMenu::class.java.getDeclaredField("mPopup")
-            f.isAccessible = true
-            val helper = f.get(popup) ?: return
-            val m = helper.javaClass.getMethod("setForceShowIcon", Boolean::class.javaPrimitiveType)
-            m.invoke(helper, true)
-        } catch (_: Exception) {
-        }
-    }
-
     private fun showCastDevicePicker() {
         val selector = MediaRouteSelector.Builder()
             .addControlCategory(
@@ -1444,6 +1522,49 @@ class PublicDownloadsActivity : AppCompatActivity() {
 
     private fun startCastPlaylist(entries: List<DownloadedFileEntry>) {
         if (entries.isEmpty()) return
+        CastTargetChooser.show(
+            activity = this,
+            onChromecast = { startChromecastPlaylist(entries) },
+            onAmazonDevice = { renderer -> startAmazonCastPlaylist(entries, renderer) }
+        )
+    }
+
+    private fun startAmazonCastPlaylist(entries: List<DownloadedFileEntry>, renderer: DlnaRenderer) {
+        amazonCastSession?.stop()
+        // Oprește sesiunea Chromecast dacă e activă, ca să nu concureze pe același stream HTTP.
+        runCatching { CastPlaybackHelper.disconnectCast(this) }
+        amazonCastSession = AmazonCastSession(
+            appContext = applicationContext,
+            renderer = renderer,
+            entries = entries,
+            onFinished = {
+                runOnUiThread {
+                    amazonCastSession = null
+                    Toast.makeText(this, R.string.cast_amazon_finished, Toast.LENGTH_SHORT).show()
+                    updateCastPlaybackBar()
+                }
+            },
+            onError = { msg ->
+                runOnUiThread {
+                    Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+                    amazonCastSession = null
+                    updateCastPlaybackBar()
+                }
+            },
+            onStatus = { title ->
+                runOnUiThread {
+                    Toast.makeText(
+                        this,
+                        getString(R.string.cast_amazon_started, "$title → ${renderer.displayLabel()}"),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        ).also { it.start() }
+    }
+
+    private fun startChromecastPlaylist(entries: List<DownloadedFileEntry>) {
+        if (entries.isEmpty()) return
         if (castContext == null) {
             Toast.makeText(
                 this,
@@ -1452,6 +1573,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
             ).show()
             return
         }
+        amazonCastSession?.stop()
+        amazonCastSession = null
         castOpToken++
         val opToken = castOpToken
         lastLoggedCastState = null
@@ -1668,21 +1791,28 @@ class PublicDownloadsActivity : AppCompatActivity() {
 
         inner class FolderVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val name: TextView = itemView.findViewById(R.id.rowFolderName)
+            private val deleteBtn: ImageButton = itemView.findViewById(R.id.btnFolderDelete)
 
             fun bind(folderName: String) {
                 name.text = folderName
                 itemView.setOnClickListener { navigateIntoFolder(folderName) }
+                deleteBtn.setOnClickListener { showDeleteFolderDialog(folderName) }
             }
         }
 
         inner class FileVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val checkbox: CheckBox = itemView.findViewById(R.id.rowCheckbox)
+            private val thumb: ImageView = itemView.findViewById(R.id.rowThumb)
+            private val duration: TextView = itemView.findViewById(R.id.rowDuration)
             private val title: TextView = itemView.findViewById(R.id.rowFileTitle)
+            private val meta: TextView = itemView.findViewById(R.id.rowFileMeta)
             private val more: ImageButton = itemView.findViewById(R.id.btnRowMore)
 
             fun bind(entry: DownloadedFileEntry) {
                 val key = entry.stableKey()
-                title.text = entry.title
+                title.text = entry.title.substringBeforeLast('.').ifBlank { entry.title }
+                meta.visibility = View.GONE
+                meta.tag = key
                 more.setOnClickListener { showFileMenu(entry, more) }
 
                 checkbox.setOnCheckedChangeListener(null)
@@ -1693,6 +1823,42 @@ class PublicDownloadsActivity : AppCompatActivity() {
                 }
                 title.setOnClickListener {
                     checkbox.isChecked = !checkbox.isChecked
+                }
+                thumb.setOnClickListener {
+                    checkbox.isChecked = !checkbox.isChecked
+                }
+
+                // Thumbnail + durată (sidecar .jpg / artwork / frame).
+                runCatching {
+                    DownloadArtwork.bind(thumb, duration, entry, R.drawable.ic_action_play)
+                }
+
+                // Autor / artist / album din .dlpulse.json sau tag-uri media.
+                runCatching {
+                    DownloadMetadata.loadAsync(this@PublicDownloadsActivity, entry) { info ->
+                        if (isDestroyed || isFinishing) return@loadAsync
+                        val displayTitle = info?.title?.takeIf { it.isNotBlank() }
+                            ?: entry.title.substringBeforeLast('.').ifBlank { entry.title }
+                        val subtitle = info?.subtitle()
+                        val durationText = info?.durationSeconds?.let {
+                            DownloadArtwork.formatDurationMs(it * 1000L)
+                        }
+                        runOnUiThread {
+                            if (isDestroyed || isFinishing || meta.tag != key) return@runOnUiThread
+                            title.text = displayTitle
+                            if (!subtitle.isNullOrBlank()) {
+                                meta.text = subtitle
+                                meta.visibility = View.VISIBLE
+                            } else {
+                                meta.visibility = View.GONE
+                            }
+                            // Completează durata dacă artwork nu a reușit încă.
+                            if (durationText != null && duration.visibility != View.VISIBLE) {
+                                duration.text = durationText
+                                duration.visibility = View.VISIBLE
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -7,10 +7,15 @@
     <string name="app_version_update_pending">Versiune %1$s · disponibil: %2$s</string>
     <string name="app_version_newer_than_release">Versiune %1$s (mai nouă decât ultimul release %2$s)</string>
     <string name="update_available_title">Actualizare disponibilă</string>
-    <string name="update_available_message">Pe GitHub există versiunea %1$s (tu ai %2$s).\n\nRelease: %3$s</string>
-    <string name="update_open_release">Deschide pagina release</string>
-    <string name="update_download_apk">Descarcă APK</string>
+    <string name="update_available_message">Pe GitHub există versiunea %1$s (tu ai %2$s).\n\nRelease: %3$s\n\nApasă „Actualizează” ca să descarci APK-ul și să pornească instalarea. Dacă Android cere dezinstalarea versiunii vechi, e doar o dată (semnătură stabilă de la 1.0.16).</string>
+    <string name="update_open_release">Pagina release</string>
+    <string name="update_download_apk">Actualizează</string>
     <string name="update_later">Mai târziu</string>
+    <string name="update_downloading_title">Descărcare actualizare</string>
+    <string name="update_downloading_message">Se descarcă DLPulse %1$s…</string>
+    <string name="update_download_failed">Descărcarea a eșuat: %1$s</string>
+    <string name="update_install_prompt">Confirmă instalarea în ecranul următor.</string>
+    <string name="update_need_unknown_sources">Permite instalarea din această aplicație (surse necunoscute), apoi reîncearcă Actualizează.</string>
     <string name="cast_stream_channel_name">Proiecție Chromecast</string>
     <string name="cast_stream_notification_title">Proiecție activă</string>
     <string name="cast_stream_notification_text">Stream local pentru Chromecast</string>
@@ -35,7 +40,7 @@
     <string name="cd_language_menu">Limbă</string>
     <string name="cd_menu_play_file">Redă fișierul</string>
     <string name="cd_menu_share_file">Partajă fișierul</string>
-    <string name="cd_menu_cast_file">Proiectează pe Chromecast</string>
+    <string name="cd_menu_cast_file">Proiectează (Chromecast / DLNA)</string>
 
     <string name="player_cast_no_http">Nu pot porni serverul HTTP: fără IP Wi‑Fi util. Dezactivează VPN ca Chromecast să poată accesa telefonul.</string>
     <string name="player_cast_no_session">Sesiune Cast indisponibilă.</string>
@@ -104,6 +109,10 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="main_dialog_save_title">Unde salvăm fișierele?</string>
     <string name="main_save_public">Descărcări publice (folder DLPulse)</string>
     <string name="main_save_other">Alt folder (card, Drive, etc.)</string>
+    <string name="save_picker_here">Salvează aici</string>
+    <string name="save_picker_new_folder">Folder nou</string>
+    <string name="save_picker_custom">Altă cale…</string>
+    <string name="save_picker_up">‥ folder părinte</string>
     <string name="perm_startup_title">Permisiuni necesare</string>
     <string name="perm_startup_message">DLPulse are nevoie de acces la media și fișiere ca să listeze, mute și șteargă descărcările din Download/DLPulse. Urmează dialogurile Android.</string>
     <string name="perm_startup_continue">Continuă</string>
@@ -149,17 +158,18 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="main_term_info_modules">[INFO] Alte module (Python încorporat etc.) se livrează cu APK-ul.</string>
     <string name="main_term_done">$ Gata. Poți închide această consolă.</string>
 
-    <string name="toast_batch_done">Gata: %1$d fișier(e).\nSalvat în app:\n%2$s\nExport suplimentar: %3$d/%1$d.%4$s</string>
+    <string name="toast_batch_done">Gata: %1$d fișier(e).\n%2$s\nExport: %3$d/%1$d.%4$s</string>
     <string name="toast_some_errors">\nUnele: %1$s</string>
 
     <string name="export_private_only">Nu s-a copiat în afara aplicației (ai ales doar memoria privată).</string>
     <string name="export_user_ok">Copiat și în folderul ales.</string>
     <string name="export_user_partial">Parțial în folderul ales (%1$d/%2$d); restul doar în calea de mai sus.</string>
     <string name="export_user_fail">Nu s-a putut scrie în folderul ales; fișierele sunt în calea de mai sus.</string>
-    <string name="export_public_q">Copiat și în Descărcări → DLPulse.</string>
-    <string name="export_public_ok">Copiat în Descărcări publice.</string>
-    <string name="export_public_partial">Export suplimentar: %1$d/%2$d.</string>
-    <string name="toast_done_files">Gata: %1$s\n\nSalvare locală (sursă):\n%2$s\n\n%3$s</string>
+    <string name="export_public_q">Salvat în Descărcări → DLPulse%1$s.</string>
+    <string name="export_public_ok">Salvat în Descărcări → DLPulse%1$s.</string>
+    <string name="export_public_partial">Export: %1$d/%2$d în Descărcări → DLPulse%3$s.</string>
+    <string name="export_staging_cleaned"> (copiile temporare din aplicație au fost șterse)</string>
+    <string name="toast_done_files">Gata: %1$s\n\n%2$s</string>
 
     <string-array name="format_preset_labels">
         <item>Video – cea mai bună calitate (video+audio)</item>
@@ -233,6 +243,11 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="browse_delete">Șterge</string>
     <string name="browse_delete_done">Fișier șters.</string>
     <string name="browse_delete_failed">Nu s-a putut șterge. Permisiunea media e doar de citire — acceptă dialogul Android de confirmare dacă apare.</string>
+    <string name="browse_delete_folder">Șterge folder</string>
+    <string name="browse_delete_folder_confirm_title">Ștergere folder</string>
+    <string name="browse_delete_folder_confirm_message">Ștergi folderul „%1$s” și tot conținutul lui (fișiere, coperti, metadate)?</string>
+    <string name="browse_delete_folder_done">Folder șters.</string>
+    <string name="browse_delete_folder_failed">Nu s-a putut șterge folderul. Verifică permisiunile sau acceptă dialogul Android dacă apare.</string>
     <string name="cd_menu_rename_file">Redenumește</string>
     <string name="cd_menu_move_file">Mută fișierul</string>
     <string name="cd_menu_delete_file">Șterge fișierul</string>
@@ -244,7 +259,7 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="browse_selected_n">%1$d selectate</string>
     <string name="cd_browse_playlist_play">Redă playlist</string>
     <string name="cd_browse_selection_share">Partajă selecția</string>
-    <string name="cd_browse_playlist_cast">Proiectează playlist</string>
+    <string name="cd_browse_playlist_cast">Proiectează playlist (Chromecast / DLNA)</string>
     <string name="search_play_in_app">Redă</string>
     <string name="search_play_preparing">Se pregătește redarea…</string>
     <string name="search_play_failed">Nu s-a putut porni redarea.</string>
@@ -260,6 +275,15 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="cast_toast_playback_error">Chromecast: eroare la redare (codec, container sau URL inaccesibil de pe TV). Încearcă MP4 (H.264/AAC) și aceeași rețea Wi‑Fi.</string>
     <string name="cast_needs_play_services">Proiectarea necesită Google Play Services.</string>
     <string name="cast_http_start_failed">Nu pot porni serverul HTTP: fără IP Wi‑Fi util. Dezactivează VPN/Tailscale ca Chromecast să poată accesa telefonul.</string>
+    <string name="cast_target_title">Proiectează pe</string>
+    <string name="cast_target_chromecast">Chromecast / Google Cast</string>
+    <string name="cast_target_amazon">Amazon Fire TV (DLNA)</string>
+    <string name="cast_amazon_scanning">Caut dispozitive Amazon / DLNA pe Wi‑Fi…</string>
+    <string name="cast_amazon_pick_device">Alege dispozitivul Amazon</string>
+    <string name="cast_amazon_none_found">Niciun Fire TV / renderer DLNA găsit.\n\nEcho (Alexa) nu acceptă cast din aplicații third-party. Folosește un Fire TV pe același Wi‑Fi sau Chromecast.</string>
+    <string name="cast_amazon_play_failed">Nu s-a putut porni redarea pe %1$s. Verifică Wi‑Fi și formatul (MP4/MP3).</string>
+    <string name="cast_amazon_started">Proiectare Amazon: %1$s</string>
+    <string name="cast_amazon_finished">Proiecție Amazon încheiată.</string>
     <string name="cast_pick_tv">Alege televizorul / Chromecast din listă.</string>
     <string name="cast_next_file_failed">Nu pot deschide următorul fișier pentru proiecție.</string>
     <string name="cast_head_wifi_long">Verificare: URL-ul local nu răspunde la HEAD. TV-ul poate să nu primească stream-ul; verifică Wi‑Fi.</string>

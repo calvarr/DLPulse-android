@@ -9,7 +9,7 @@
     android:orientation="horizontal"
     android:paddingStart="12dp"
     android:paddingTop="10dp"
-    android:paddingEnd="12dp"
+    android:paddingEnd="6dp"
     android:paddingBottom="10dp">
 
     <ImageView
@@ -33,7 +33,18 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginEnd="2dp"
         android:text="›"
         android:textColor="@color/steam_parchment_dim"
         android:textSize="18sp" />
+
+    <ImageButton
+        android:id="@+id/btnFolderDelete"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/browse_delete_folder"
+        android:padding="8dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_action_delete" />
 </LinearLayout>

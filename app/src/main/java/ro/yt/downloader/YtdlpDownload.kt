@@ -250,12 +250,10 @@ object YtdlpDownload {
                 }
             }
             applyEmbedMetadataForAudio(preset, forceMp3ForYoutubeNativeAudio)
+            applyWriteThumbnailSidecar()
+            applyWriteInfoJson()
         }
     }
-
-    /**
-     * Metadate + copertă în fișier (ID3/APIC pentru MP3 etc.), dacă suportă yt-dlp/ffmpeg.
-     */
     private fun YoutubeDLRequest.applyEmbedMetadataForAudio(
         preset: FormatPreset,
         forceMp3ForYoutubeNativeAudio: Boolean = false
@@ -264,6 +262,17 @@ object YtdlpDownload {
         if (!shouldEmbed) return
         addOption("--embed-metadata")
         addOption("--embed-thumbnail")
+    }
+
+    /** Copertă pe disc lângă media (pentru player/cast). */
+    private fun YoutubeDLRequest.applyWriteThumbnailSidecar() {
+        addOption("--write-thumbnail")
+        addOption("--convert-thumbnails", "jpg")
+    }
+
+    /** Metadate yt-dlp pe disc — convertite în .dlpulse.json la export. */
+    private fun YoutubeDLRequest.applyWriteInfoJson() {
+        addOption("--write-info-json")
     }
 
     private fun requestBestEffort(
@@ -292,6 +301,8 @@ object YtdlpDownload {
                 addOption("--audio-quality", "0")
             }
             applyEmbedMetadataForAudio(preset, forceMp3ForYoutubeNativeAudio)
+            applyWriteThumbnailSidecar()
+            applyWriteInfoJson()
         }
     }
 
@@ -321,6 +332,8 @@ object YtdlpDownload {
                 addOption("--audio-quality", "0")
             }
             applyEmbedMetadataForAudio(preset, forceMp3ForYoutubeNativeAudio)
+            applyWriteThumbnailSidecar()
+            applyWriteInfoJson()
         }
     }
 }
