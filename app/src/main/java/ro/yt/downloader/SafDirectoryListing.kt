@@ -22,12 +22,16 @@ object SafDirectoryListing {
         }
         val folders = mutableListOf<String>()
         val files = mutableListOf<DownloadedFileEntry>()
-        for (child in dir.listFiles()) {
+        val childDocs = dir.listFiles() ?: emptyArray()
+        val siblingNames = childDocs.filter { it.isFile }.mapNotNull { it.name }.toSet()
+        for (child in childDocs) {
             val name = child.name ?: continue
             if (name.startsWith(".")) continue
             if (child.isDirectory) {
                 folders.add(name)
             } else if (child.isFile) {
+                if (DownloadArtwork.isThumbnailSidecar(name, siblingNames)) continue
+                if (DownloadMetadata.isMetadataSidecar(name)) continue
                 val mime = child.type?.takeIf { it.isNotBlank() }
                     ?: DownloadMime.guessFromFileName(name)
                 val len = runCatching { child.length() }.getOrDefault(-1L)
@@ -53,6 +57,24 @@ object SafDirectoryListing {
         val parent = resolveDirectory(context, treeUri, pathSegments) ?: return false
         if (parent.findFile(safe) != null) return false
         return parent.createDirectory(safe) != null
+    }
+
+    fun deleteFolder(context: Context, treeUri: Uri, pathSegments: List<String>, folderName: String): Boolean {
+        val parent = resolveDirectory(context, treeUri, pathSegments) ?: return false
+        val target = parent.findFile(folderName) ?: return false
+        if (!target.isDirectory) return false
+        return deleteDocumentTree(target)
+    }
+
+    private fun deleteDocumentTree(dir: DocumentFile): Boolean {
+        for (child in dir.listFiles()) {
+            if (child.isDirectory) {
+                if (!deleteDocumentTree(child)) return false
+            } else if (child.isFile) {
+                if (!child.delete()) return false
+            }
+        }
+        return dir.delete()
     }
 
     /** Mută un fișier (DocumentFile) în folderul țintă sub [destPathSegments]. */
