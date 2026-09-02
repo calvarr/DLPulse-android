@@ -831,13 +831,21 @@ class MainActivity : AppCompatActivity() {
     private fun startPlayInAppFromSearchItem(item: SearchResultItem) {
         Toast.makeText(this, R.string.search_play_preparing, Toast.LENGTH_SHORT).show()
         Thread {
-            val r = YtdlpPlayUrl.extractStreamUrlForPlayback(applicationContext, item.url)
+            val r = YtdlpPlayUrl.extractForPlayback(applicationContext, item.url)
             runOnUiThread {
                 r.fold(
-                    onSuccess = { streamUrl ->
+                    onSuccess = { stream ->
                         startActivity(
                             Intent(this@MainActivity, PlayerActivity::class.java).apply {
-                                putExtra(PlayerActivity.EXTRA_URI, streamUrl)
+                                putExtra(PlayerActivity.EXTRA_URI, stream.videoUrl)
+                                stream.audioUrl?.let {
+                                    putExtra(PlayerActivity.EXTRA_URI_AUDIO, it)
+                                }
+                                if (stream.headers.isNotEmpty()) {
+                                    val headerBundle = Bundle()
+                                    stream.headers.forEach { (k, v) -> headerBundle.putString(k, v) }
+                                    putExtra(PlayerActivity.EXTRA_HTTP_HEADERS, headerBundle)
+                                }
                                 putExtra(PlayerActivity.EXTRA_TITLE, item.title)
                             }
                         )

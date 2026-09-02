@@ -20,7 +20,11 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.media3.session.MediaSession
 import com.google.android.gms.cast.MediaMetadata as CastMediaMetadata
 import com.google.android.gms.cast.framework.CastContext
@@ -29,6 +33,7 @@ import com.google.android.gms.cast.framework.SessionManagerListener
 import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import ro.yt.downloader.databinding.ActivityPlayerBinding
 
+@OptIn(UnstableApi::class)
 class PlayerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPlayerBinding
@@ -96,6 +101,8 @@ class PlayerActivity : AppCompatActivity() {
 
         val list = intent.getStringArrayExtra(EXTRA_URI_LIST)
         val single = intent.getStringExtra(EXTRA_URI)
+        val audioUrl = intent.getStringExtra(EXTRA_URI_AUDIO)?.trim()?.takeIf { it.isNotEmpty() }
+        val httpHeaders = readHttpHeadersExtra()
         val uriStrings: Array<String> = when {
             !list.isNullOrEmpty() -> list
             !single.isNullOrEmpty() -> arrayOf(single)
@@ -186,18 +193,66 @@ class PlayerActivity : AppCompatActivity() {
             .setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_UNKNOWN)
             .build()
-        val exo = ExoPlayer.Builder(this)
+        val needsHttpHeaders = httpHeaders.isNotEmpty() ||
+            uriStrings.any { it.startsWith("http://") || it.startsWith("https://") } ||
+            !audioUrl.isNullOrBlank()
+        val streamDataSourceFactory = if (needsHttpHeaders) {
+            DefaultHttpDataSource.Factory()
+                .setAllowCrossProtocolRedirects(true)
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(15_000)
+                .setDefaultRequestProperties(
+                    httpHeaders.ifEmpty {
+                        mapOf(
+                            "User-Agent" to
+                                "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+                            "Referer" to "https://www.youtube.com/",
+                            "Origin" to "https://www.youtube.com"
+                        )
+                    }
+                )
+        } else {
+            null
+        }
+        val exoBuilder = ExoPlayer.Builder(this)
             .setAudioAttributes(audioAttrs, /* handleAudioFocus= */ true)
             .setHandleAudioBecomingNoisy(true)
             // Fără wake lock: redarea nu trebuie să continue după autoblocare.
             .setWakeMode(C.WAKE_MODE_NONE)
-            .build()
+        if (streamDataSourceFactory != null) {
+            exoBuilder.setMediaSourceFactory(DefaultMediaSourceFactory(streamDataSourceFactory))
+        }
+        val exo = exoBuilder.build()
         player = exo
         binding.playerView.player = exo
         binding.playerView.setFullscreenButtonClickListener { enterFullscreen ->
             applyFullscreenUi(enterFullscreen)
         }
-        exo.setMediaItems(buildMediaItemsForSession(uriStrings, titleOverride))
+        if (!audioUrl.isNullOrBlank() && uriStrings.size == 1) {
+            // DASH YouTube: video + audio pe URL-uri separate.
+            val mediaSourceFactory = DefaultMediaSourceFactory(
+                streamDataSourceFactory ?: DefaultHttpDataSource.Factory()
+            )
+            val title = titleOverride.orEmpty().ifBlank { "stream" }
+            val videoItem = MediaItem.Builder()
+                .setUri(uriStrings[0])
+                .setMediaId(uriStrings[0])
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(title)
+                        .setDisplayTitle(title)
+                        .build()
+                )
+                .build()
+            val audioItem = MediaItem.fromUri(audioUrl)
+            val merged = MergingMediaSource(
+                mediaSourceFactory.createMediaSource(videoItem),
+                mediaSourceFactory.createMediaSource(audioItem)
+            )
+            exo.setMediaSource(merged)
+        } else {
+            exo.setMediaItems(buildMediaItemsForSession(uriStrings, titleOverride))
+        }
         exo.prepare()
         exo.playWhenReady = true
 
@@ -287,6 +342,16 @@ class PlayerActivity : AppCompatActivity() {
         if (!screenOffReceiverRegistered) return
         runCatching { unregisterReceiver(screenOffReceiver) }
         screenOffReceiverRegistered = false
+    }
+
+    private fun readHttpHeadersExtra(): Map<String, String> {
+        val bundle = intent.getBundleExtra(EXTRA_HTTP_HEADERS) ?: return emptyMap()
+        val out = LinkedHashMap<String, String>()
+        for (key in bundle.keySet()) {
+            val v = bundle.getString(key)?.trim().orEmpty()
+            if (!key.isNullOrBlank() && v.isNotEmpty()) out[key] = v
+        }
+        return out
     }
 
     /**
@@ -412,6 +477,10 @@ class PlayerActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_URI = "uri"
         const val EXTRA_URI_LIST = "uri_list"
+        /** URL audio separat (DASH), opțional. */
+        const val EXTRA_URI_AUDIO = "uri_audio"
+        /** Headere HTTP pentru CDN YouTube (Bundle String→String). */
+        const val EXTRA_HTTP_HEADERS = "http_headers"
         const val EXTRA_TITLE = "title"
         const val EXTRA_MIME = "mime"
     }

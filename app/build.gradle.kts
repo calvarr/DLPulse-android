@@ -9,8 +9,8 @@ android {
         applicationId = "ro.yt.downloader"
         minSdk = 24
         targetSdk = 34
-        versionCode = 20
-        versionName = "1.0.20"
+        versionCode = 21
+        versionName = "1.0.21"
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         }
