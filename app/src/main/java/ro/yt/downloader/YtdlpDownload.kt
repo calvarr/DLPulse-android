@@ -125,8 +125,9 @@ object YtdlpDownload {
                 }
             }.getOrElse { e ->
                 // Biblioteca aruncă pe exitCode != 0 — tratează ca eșec de format când e cazul.
-                lastErr = e.message.orEmpty()
-                if (lastErr.isNotBlank() && isFormatNotAvailable(lastErr)) {
+                val errMsg = e.message.orEmpty()
+                lastErr = errMsg
+                if (errMsg.isNotBlank() && isFormatNotAvailable(errMsg)) {
                     return@getOrElse null
                 }
                 // Bot/auth pe clientul curent — nu mai încerca restul formatelor.
@@ -136,13 +137,14 @@ object YtdlpDownload {
                 continue
             }
             if (response.exitCode != 0) {
-                lastErr = responseText(response)
-                if (!lastErr.isNullOrBlank() && isFormatNotAvailable(lastErr)) {
+                val errText = responseText(response)
+                lastErr = errText
+                if (errText.isNotBlank() && isFormatNotAvailable(errText)) {
                     continue
                 }
                 return Result.failure(
                     IllegalStateException(
-                        lastErr.ifBlank {
+                        errText.ifBlank {
                             appContext.getString(R.string.err_download_exit_code, response.exitCode)
                         }
                     )
