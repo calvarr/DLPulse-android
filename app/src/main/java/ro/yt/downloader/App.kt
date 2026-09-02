@@ -26,5 +26,20 @@ class App : Application() {
         } catch (e: Exception) {
             e.message ?: e.toString()
         }
+        // Reutilizează / creează Download/DLPulse pe stocarea publică (nu spațiul privat).
+        Thread {
+            runCatching { DlpulseStorage.ensureRoot(applicationContext) }
+        }.start()
+        // Actualizează yt-dlp pe nightly în background (clienți YouTube la zi).
+        if (initError == null) {
+            Thread {
+                runCatching {
+                    YoutubeDL.getInstance().updateYoutubeDL(
+                        applicationContext,
+                        YoutubeDL.UpdateChannel._NIGHTLY
+                    )
+                }
+            }.start()
+        }
     }
 }

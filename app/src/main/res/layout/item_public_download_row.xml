@@ -12,23 +12,81 @@
     android:paddingEnd="6dp"
     android:paddingBottom="6dp">
 
-    <CheckBox
-        android:id="@+id/rowCheckbox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:minWidth="0dp"
-        android:minHeight="0dp" />
+    <FrameLayout
+        android:layout_width="96dp"
+        android:layout_height="54dp"
+        android:layout_marginEnd="8dp">
 
-    <TextView
-        android:id="@+id/rowFileTitle"
+        <ImageView
+            android:id="@+id/rowThumb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#1A1510"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_action_play" />
+
+        <CheckBox
+            android:id="@+id/rowCheckbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_margin="0dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="1dp"
+            android:background="#99000000"
+            android:buttonTint="@color/steam_brass" />
+
+        <TextView
+            android:id="@+id/rowDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="3dp"
+            android:background="@drawable/bg_duration_badge"
+            android:paddingStart="4dp"
+            android:paddingTop="1dp"
+            android:paddingEnd="4dp"
+            android:paddingBottom="1dp"
+            android:textColor="#FFFFFF"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:ignore="RtlSymmetry"
+            tools:text="3:45"
+            tools:visibility="visible" />
+    </FrameLayout>
+
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:ellipsize="end"
-        android:maxLines="2"
-        android:textColor="@color/steam_parchment"
-        android:textSize="14sp"
-        tools:text="video_title.mp4" />
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/rowFileTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="5"
+            android:lineSpacingExtra="1dp"
+            android:textColor="@color/steam_parchment"
+            android:textSize="13sp"
+            tools:text="Titlu video lung care trebuie afisat complet pe mai multe randuri.mp4" />
+
+        <TextView
+            android:id="@+id/rowFileMeta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@color/steam_parchment_dim"
+            android:textSize="11sp"
+            android:visibility="gone"
+            tools:text="Oliver Sjostrom"
+            tools:visibility="visible" />
+    </LinearLayout>
 
     <ImageButton
         android:id="@+id/btnRowMore"
