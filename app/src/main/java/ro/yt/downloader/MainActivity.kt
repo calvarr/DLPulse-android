@@ -160,6 +160,7 @@ class MainActivity : AppCompatActivity() {
         terminalProgress = findViewById(R.id.terminalProgress)
         btnTerminalClose = findViewById(R.id.btnTerminalClose)
         textAppVersion = findViewById(R.id.textAppVersion)
+        textAppVersion.setOnClickListener { checkForAppUpdateNow(forceDialog = true) }
 
         btnIconUpdate.setOnClickListener { startManualDependencyUpdate() }
         btnIconDonate.setOnClickListener {
@@ -438,8 +439,17 @@ class MainActivity : AppCompatActivity() {
     private fun refreshReleaseInfoFromGitHub() {
         val prefs = UpdateCheckPrefs(this)
         if (!prefs.shouldRunNetworkCheck()) return
+        checkForAppUpdateNow(forceDialog = false)
+    }
+
+    private fun checkForAppUpdateNow(forceDialog: Boolean) {
         if (githubReleaseCheckRunning) return
         githubReleaseCheckRunning = true
+        val prefs = UpdateCheckPrefs(this)
+        if (forceDialog) {
+            prefs.forceAllowNetworkCheck()
+            prefs.clearDismissedOffer()
+        }
         Thread {
             val result = GitHubLatestRelease.fetchLatest()
             runOnUiThread {
@@ -451,13 +461,31 @@ class MainActivity : AppCompatActivity() {
                             prefs.cacheRemoteRelease(info.versionCore, info.tagName)
                             applyVersionLineFromCache()
                             val installed = installedVersionName()
-                            if (AppVersion.compare(installed, info.versionCore) < 0 &&
-                                !UpdateCheckPrefs(this@MainActivity).isOfferDismissedForTag(info.tagName)
+                            val outdated = AppVersion.compare(installed, info.versionCore) < 0
+                            if (outdated &&
+                                (forceDialog || !prefs.isOfferDismissedForTag(info.tagName))
                             ) {
                                 showUpdateAvailableDialog(info, installed)
+                            } else if (forceDialog && !outdated) {
+                                Toast.makeText(
+                                    this,
+                                    getString(R.string.app_version_with_latest, installed, info.versionCore),
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         },
-                        onFailure = { /* păstrăm ultimul cache; reîncercăm după interval */ }
+                        onFailure = {
+                            if (forceDialog) {
+                                Toast.makeText(
+                                    this,
+                                    getString(
+                                        R.string.update_download_failed,
+                                        it.message ?: getString(R.string.err_generic)
+                                    ),
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
                     )
                 } finally {
                     githubReleaseCheckRunning = false
@@ -468,6 +496,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showUpdateAvailableDialog(info: GitHubReleaseInfo, installed: String) {
         val prefs = UpdateCheckPrefs(this)
+        val apkUrl = info.apkBrowserDownloadUrl
         val b = MaterialAlertDialogBuilder(this)
             .setTitle(R.string.update_available_title)
             .setMessage(
@@ -478,17 +507,22 @@ class MainActivity : AppCompatActivity() {
                     info.tagName
                 )
             )
-            .setPositiveButton(R.string.update_open_release) { _, _ ->
-                prefs.dismissOfferForTag(info.tagName)
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.htmlUrl)))
-            }
             .setNegativeButton(R.string.update_later) { _, _ ->
                 prefs.dismissOfferForTag(info.tagName)
             }
-        if (!info.apkBrowserDownloadUrl.isNullOrBlank()) {
-            b.setNeutralButton(R.string.update_download_apk) { _, _ ->
+            .setNeutralButton(R.string.update_open_release) { _, _ ->
                 prefs.dismissOfferForTag(info.tagName)
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.apkBrowserDownloadUrl)))
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.htmlUrl)))
+            }
+        if (!apkUrl.isNullOrBlank()) {
+            b.setPositiveButton(R.string.update_download_apk) { _, _ ->
+                prefs.dismissOfferForTag(info.tagName)
+                AppUpdateInstaller.start(this, apkUrl, info.versionCore)
+            }
+        } else {
+            b.setPositiveButton(R.string.update_open_release) { _, _ ->
+                prefs.dismissOfferForTag(info.tagName)
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.htmlUrl)))
             }
         }
         b.show()
@@ -540,7 +574,7 @@ class MainActivity : AppCompatActivity() {
             val updateResult = runCatching {
                 YoutubeDL.getInstance().updateYoutubeDL(
                     applicationContext,
-                    YoutubeDL.UpdateChannel._STABLE
+                    YoutubeDL.UpdateChannel._NIGHTLY
                 )
             }
             if (updateResult.isSuccess) {
@@ -576,30 +610,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun confirmDestinationAndRun(action: () -> Unit) {
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.main_dialog_save_title)
-            .setItems(
-                arrayOf(
-                    getString(R.string.main_save_public),
-                    getString(R.string.main_save_other)
-                )
-            ) { _, which ->
-                when (which) {
-                    0 -> {
-                        savePrefs.setDestination(SaveDestination.PUBLIC_DOWNLOADS)
-                        action()
-                    }
-                    1 -> {
-                        pendingAfterFolder = Runnable {
-                            savePrefs.setDestination(SaveDestination.USER_PICKED_FOLDER)
-                            action()
-                        }
-                        openTreeLauncher.launch(null)
-                    }
+        DlpulseStorage.ensureRoot(this)
+        SaveFolderPicker.show(
+            activity = this,
+            prefs = savePrefs,
+            onSaveInDlpulse = { action() },
+            onPickCustomFolder = {
+                pendingAfterFolder = Runnable {
+                    savePrefs.setDestination(SaveDestination.USER_PICKED_FOLDER)
+                    action()
                 }
+                openTreeLauncher.launch(null)
             }
-            .setNegativeButton(R.string.main_cancel, null)
-            .show()
+        )
     }
 
     private fun prepareYtdlp() {
@@ -618,7 +641,7 @@ class MainActivity : AppCompatActivity() {
             val updateResult = runCatching {
                 YoutubeDL.getInstance().updateYoutubeDL(
                     applicationContext,
-                    YoutubeDL.UpdateChannel._STABLE
+                    YoutubeDL.UpdateChannel._NIGHTLY
                 )
             }
             runOnUiThread {
@@ -1044,7 +1067,11 @@ class MainActivity : AppCompatActivity() {
                     return@runOnUiThread
                 }
                 errorText.visibility = View.GONE
-                val dir = allFiles.first().parentFile?.absolutePath ?: ""
+                val media = mediaFilesOnly(allFiles)
+                val destHint = when (savePrefs.getDestination()) {
+                    SaveDestination.USER_PICKED_FOLDER -> getString(R.string.export_user_ok)
+                    else -> getString(R.string.export_public_ok, dlpulseSuffixForToast())
+                }
                 val errHint = if (errors.isNotEmpty()) {
                     getString(
                         R.string.toast_some_errors,
@@ -1060,8 +1087,8 @@ class MainActivity : AppCompatActivity() {
                     this,
                     getString(
                         R.string.toast_batch_done,
-                        allFiles.size,
-                        dir,
+                        media.size.coerceAtLeast(exported),
+                        destHint,
                         exported,
                         errHint
                     ),
@@ -1071,69 +1098,136 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
+    private fun mediaFilesOnly(files: List<File>): List<File> {
+        val names = files.map { it.name }.toSet()
+        return files.filter { f ->
+            !DownloadArtwork.isThumbnailSidecar(f.name, names) &&
+                !DownloadArtwork.isImageFileName(f.name) &&
+                !DownloadMetadata.isMetadataSidecar(f.name)
+        }.ifEmpty {
+            files.filterNot {
+                DownloadArtwork.isImageFileName(it.name) ||
+                    DownloadMetadata.isMetadataSidecar(it.name)
+            }
+        }
+    }
+
+    private fun deleteStagingAfterExport(files: List<File>) {
+        for (f in files) {
+            runCatching { if (f.exists()) f.delete() }
+            DownloadArtwork.findSidecarBeside(f)?.let { thumb ->
+                runCatching { if (thumb.exists()) thumb.delete() }
+            }
+            DownloadMetadata.findJsonBeside(f)?.let { json ->
+                runCatching { if (json.exists()) json.delete() }
+            }
+            val parent = f.parentFile
+            val base = f.name.substringBeforeLast('.')
+            parent?.let { p ->
+                runCatching {
+                    File(p, "$base.info.json").takeIf { it.exists() }?.delete()
+                }
+            }
+        }
+    }
+
     private fun runExportForPrefs(files: List<File>): Int {
-        if (files.isEmpty()) return 0
+        val media = mediaFilesOnly(files)
+        if (media.isEmpty()) return 0
         return when (savePrefs.getDestination()) {
             SaveDestination.PRIVATE_APP_ONLY -> 0
             SaveDestination.PUBLIC_DOWNLOADS -> {
+                DlpulseStorage.ensureRoot(this)
+                val rel = savePrefs.getDlpulseRelativePath()
                 var ok = 0
-                for (f in files) {
-                    if (runCatching { DownloadExporter.copyToPublicDownloads(this, f) }.getOrNull() != null) {
+                for (f in media) {
+                    if (runCatching {
+                            DownloadExporter.copyMediaWithSidecar(this, f, rel)
+                        }.getOrDefault(false)
+                    ) {
                         ok++
                     }
                 }
+                if (ok > 0) deleteStagingAfterExport(media)
                 ok
             }
             SaveDestination.USER_PICKED_FOLDER -> {
-                val uriStr = savePrefs.getTreeUriString() ?: return fallbackPublicExport(files)
+                val uriStr = savePrefs.getTreeUriString() ?: return fallbackPublicExport(media)
                 val uri = Uri.parse(uriStr)
                 var ok = 0
-                for (f in files) {
-                    if (UserFolderExporter.copyFileToTree(this, uri, f)) ok++
+                for (f in media) {
+                    DownloadMetadata.ingestInfoJsonBeside(f)
+                    if (UserFolderExporter.copyFileToTree(this, uri, f)) {
+                        ok++
+                        DownloadArtwork.findSidecarBeside(f)?.let { thumb ->
+                            runCatching { UserFolderExporter.copyFileToTree(this, uri, thumb) }
+                        }
+                        DownloadMetadata.findJsonBeside(f)?.let { json ->
+                            runCatching { UserFolderExporter.copyFileToTree(this, uri, json) }
+                        }
+                    }
                 }
-                if (ok == 0 && files.isNotEmpty()) fallbackPublicExport(files) else ok
+                if (ok == 0 && media.isNotEmpty()) {
+                    fallbackPublicExport(media)
+                } else {
+                    if (ok > 0) deleteStagingAfterExport(media)
+                    ok
+                }
             }
         }
     }
 
     private fun fallbackPublicExport(files: List<File>): Int {
+        DlpulseStorage.ensureRoot(this)
+        val rel = savePrefs.getDlpulseRelativePath()
         var ok = 0
         for (f in files) {
-            if (runCatching { DownloadExporter.copyToPublicDownloads(this, f) }.getOrNull() != null) ok++
+            if (runCatching {
+                    DownloadExporter.copyMediaWithSidecar(this, f, rel)
+                }.getOrDefault(false)
+            ) {
+                ok++
+            }
         }
+        if (ok > 0) deleteStagingAfterExport(files)
         return ok
     }
 
+    private fun dlpulseSuffixForToast(): String {
+        val rel = savePrefs.getDlpulseRelativePath()
+        return if (rel.isEmpty()) "" else "/$rel"
+    }
+
     private fun toastExportResult(files: List<File>, exportedCount: Int) {
-        val names = files.joinToString(", ") { it.name }
-        val appDir = files.first().parentFile?.absolutePath ?: ""
+        val media = mediaFilesOnly(files)
+        val names = media.joinToString(", ") { it.name }
         val mode = savePrefs.getDestination()
+        val suffix = dlpulseSuffixForToast()
         val exportLine = when (mode) {
             SaveDestination.PRIVATE_APP_ONLY ->
                 getString(R.string.export_private_only)
             SaveDestination.USER_PICKED_FOLDER ->
                 when {
-                    exportedCount >= files.size -> getString(R.string.export_user_ok)
+                    exportedCount >= media.size && media.isNotEmpty() ->
+                        getString(R.string.export_user_ok)
                     exportedCount > 0 -> getString(
                         R.string.export_user_partial,
                         exportedCount,
-                        files.size
+                        media.size
                     )
                     else -> getString(R.string.export_user_fail)
                 }
             SaveDestination.PUBLIC_DOWNLOADS ->
                 when {
-                    exportedCount >= files.size && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ->
-                        getString(R.string.export_public_q)
-                    exportedCount >= files.size ->
-                        getString(R.string.export_public_ok)
+                    exportedCount >= media.size && media.isNotEmpty() ->
+                        getString(R.string.export_public_ok, suffix)
                     else ->
-                        getString(R.string.export_public_partial, exportedCount, files.size)
+                        getString(R.string.export_public_partial, exportedCount, media.size, suffix)
                 }
         }
         Toast.makeText(
             this,
-            getString(R.string.toast_done_files, names, appDir, exportLine),
+            getString(R.string.toast_done_files, names, exportLine),
             Toast.LENGTH_LONG
         ).show()
     }

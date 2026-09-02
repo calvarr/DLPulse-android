@@ -43,6 +43,13 @@ class SearchResultsAdapter(
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
         holder.title.text = item.title
+        val subtitle = item.subtitle()
+        if (!subtitle.isNullOrBlank()) {
+            holder.subtitle.text = subtitle
+            holder.subtitle.visibility = View.VISIBLE
+        } else {
+            holder.subtitle.visibility = View.GONE
+        }
         val durationText = formatDuration(item.durationSeconds)
         if (durationText != null) {
             holder.duration.text = durationText
@@ -81,6 +88,7 @@ class SearchResultsAdapter(
         val checkBox: CheckBox = itemView.findViewById(R.id.checkBox)
         val thumb: ImageView = itemView.findViewById(R.id.thumbnail)
         val title: TextView = itemView.findViewById(R.id.title)
+        val subtitle: TextView = itemView.findViewById(R.id.subtitle)
         val duration: TextView = itemView.findViewById(R.id.duration)
         val btnPlay: ImageButton = itemView.findViewById(R.id.btnPlay)
     }
