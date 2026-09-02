@@ -65,19 +65,20 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:maxLines="2"
+            android:maxLines="5"
+            android:lineSpacingExtra="1dp"
             android:textColor="@color/steam_parchment"
-            android:textSize="14sp"
-            tools:text="Titlu video" />
+            android:textSize="13sp"
+            tools:text="Titlu video lung care trebuie afisat complet pe mai multe randuri.mp4" />
 
         <TextView
             android:id="@+id/rowFileMeta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:maxLines="1"
+            android:maxLines="2"
             android:textColor="@color/steam_parchment_dim"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:visibility="gone"
             tools:text="Oliver Sjostrom"
             tools:visibility="visible" />

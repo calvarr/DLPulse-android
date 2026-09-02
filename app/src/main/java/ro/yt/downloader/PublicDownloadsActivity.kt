@@ -1794,7 +1794,7 @@ class PublicDownloadsActivity : AppCompatActivity() {
             private val deleteBtn: ImageButton = itemView.findViewById(R.id.btnFolderDelete)
 
             fun bind(folderName: String) {
-                name.text = folderName
+                FullTitleText.bind(name, folderName)
                 itemView.setOnClickListener { navigateIntoFolder(folderName) }
                 deleteBtn.setOnClickListener { showDeleteFolderDialog(folderName) }
             }
@@ -1810,7 +1810,8 @@ class PublicDownloadsActivity : AppCompatActivity() {
 
             fun bind(entry: DownloadedFileEntry) {
                 val key = entry.stableKey()
-                title.text = entry.title.substringBeforeLast('.').ifBlank { entry.title }
+                // Numele complet pe disc (cu extensie), pe mai multe rânduri.
+                FullTitleText.bind(title, entry.title)
                 meta.visibility = View.GONE
                 meta.tag = key
                 more.setOnClickListener { showFileMenu(entry, more) }
@@ -1833,19 +1834,17 @@ class PublicDownloadsActivity : AppCompatActivity() {
                     DownloadArtwork.bind(thumb, duration, entry, R.drawable.ic_action_play)
                 }
 
-                // Autor / artist / album din .dlpulse.json sau tag-uri media.
+                // Autor / artist / album din .dlpulse.json sau tag-uri media (subtitlu, nu înlocuiește numele fișierului).
                 runCatching {
                     DownloadMetadata.loadAsync(this@PublicDownloadsActivity, entry) { info ->
                         if (isDestroyed || isFinishing) return@loadAsync
-                        val displayTitle = info?.title?.takeIf { it.isNotBlank() }
-                            ?: entry.title.substringBeforeLast('.').ifBlank { entry.title }
                         val subtitle = info?.subtitle()
                         val durationText = info?.durationSeconds?.let {
                             DownloadArtwork.formatDurationMs(it * 1000L)
                         }
                         runOnUiThread {
                             if (isDestroyed || isFinishing || meta.tag != key) return@runOnUiThread
-                            title.text = displayTitle
+                            FullTitleText.bind(title, entry.title)
                             if (!subtitle.isNullOrBlank()) {
                                 meta.text = subtitle
                                 meta.visibility = View.VISIBLE

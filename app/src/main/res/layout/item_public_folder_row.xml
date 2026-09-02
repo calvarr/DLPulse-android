@@ -25,9 +25,10 @@
         android:layout_marginStart="10dp"
         android:layout_weight="1"
         android:ellipsize="end"
-        android:maxLines="1"
+        android:maxLines="4"
+        android:lineSpacingExtra="1dp"
         android:textColor="@color/steam_brass"
-        android:textSize="15sp"
+        android:textSize="13sp"
         tools:text="Muzică" />
 
     <TextView

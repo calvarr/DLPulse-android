@@ -42,7 +42,7 @@ class SearchResultsAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
-        holder.title.text = item.title
+        FullTitleText.bind(holder.title, item.title)
         val subtitle = item.subtitle()
         if (!subtitle.isNullOrBlank()) {
             holder.subtitle.text = subtitle
