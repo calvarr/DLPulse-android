@@ -198,6 +198,7 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
 
     <string name="ytdlp_err_unknown">Unknown error.</string>
     <string name="ytdlp_hint_network">— Network/DNS: check Wi‑Fi or mobile data, try without VPN or another DNS.</string>
+    <string name="ytdlp_hint_bot">— YouTube bot check. Update yt-dlp from the menu (nightly), try another network / without VPN, or retry later.</string>
     <string name="err_preset_invalid">Invalid format</string>
     <string name="err_download_exit_code">code %1$d</string>
     <string name="err_no_new_output_file">No new file was created.</string>

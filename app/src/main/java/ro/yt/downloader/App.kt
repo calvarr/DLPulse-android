@@ -30,5 +30,16 @@ class App : Application() {
         Thread {
             runCatching { DlpulseStorage.ensureRoot(applicationContext) }
         }.start()
+        // Actualizează yt-dlp pe nightly în background (clienți YouTube la zi).
+        if (initError == null) {
+            Thread {
+                runCatching {
+                    YoutubeDL.getInstance().updateYoutubeDL(
+                        applicationContext,
+                        YoutubeDL.UpdateChannel._NIGHTLY
+                    )
+                }
+            }.start()
+        }
     }
 }

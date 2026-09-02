@@ -30,6 +30,9 @@ object YtdlpError {
         if ("errno 7" in m || "no address associated" in m || "name or service not known" in m) {
             return msg + "\n\n" + context.getString(R.string.ytdlp_hint_network)
         }
+        if (YtdlpYoutubeClients.looksLikeBotOrAuthBlock(msg)) {
+            return msg + "\n\n" + context.getString(R.string.ytdlp_hint_bot)
+        }
         return msg
     }
 }

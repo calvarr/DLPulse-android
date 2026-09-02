@@ -36,11 +36,8 @@ private val FORMATS_AUDIO_TO_TRY = listOf(
     "worst"
 )
 
-/** Android + web: mai puțin dependent de rezolvare JS decât doar „web”. */
-private const val YT_EXTRACTOR_PRIMARY = "youtube:player_client=android,web"
-
-/** Reîncercare când apar erori de semnătură / challenge. */
-private const val YT_EXTRACTOR_FALLBACK = "youtube:player_client=tv_embedded"
+/** Preferă default-urile yt-dlp; fallback-urile vechi rămân ca rezervă. */
+private val YT_EXTRACTOR_ATTEMPTS: List<String?> = YtdlpYoutubeClients.extractorArgAttempts()
 
 object YtdlpDownload {
 
@@ -62,18 +59,6 @@ object YtdlpDownload {
         }
     }
 
-    private fun shouldRetryWithFallbackExtractor(msg: String): Boolean {
-        val m = msg.lowercase()
-        val formatIssue = ("format" in m || "formats" in m) &&
-            ("not available" in m || "requested" in m || "no video" in m)
-        return "signature" in m ||
-            "challenge" in m ||
-            "javascript" in m ||
-            "only images are available" in m ||
-            "n challenge" in m ||
-            formatIssue
-    }
-
     fun runDownload(
         appContext: Context,
         url: String,
@@ -83,27 +68,22 @@ object YtdlpDownload {
         onProgress: ((Float, Long, String) -> Unit)? = null
     ): Result<List<File>> {
         val targetUrl = YoutubeUrl.normalize(url)
-        val first = runDownloadWithExtractor(
-            appContext, targetUrl, outputDir, presetIndex, noPlaylist, YT_EXTRACTOR_PRIMARY, onProgress
-        )
-        if (first.isSuccess) return first
-        val msg = first.exceptionOrNull()?.message.orEmpty()
-        if (shouldRetryWithFallbackExtractor(msg)) {
-            val second = runDownloadWithExtractor(
-                appContext, targetUrl, outputDir, presetIndex, noPlaylist, YT_EXTRACTOR_FALLBACK, onProgress
+        val attempts = if (YoutubeUrl.isYouTubePage(targetUrl)) {
+            YT_EXTRACTOR_ATTEMPTS
+        } else {
+            listOf(null)
+        }
+        var lastMsg = ""
+        for (extractorArgs in attempts) {
+            val result = runDownloadWithExtractor(
+                appContext, targetUrl, outputDir, presetIndex, noPlaylist, extractorArgs, onProgress
             )
-            if (second.isSuccess) return second
-            return Result.failure(
-                IllegalStateException(
-                    YtdlpError.sanitizeForUser(
-                        appContext,
-                        second.exceptionOrNull()?.message ?: msg
-                    )
-                )
-            )
+            if (result.isSuccess) return result
+            lastMsg = result.exceptionOrNull()?.message.orEmpty()
+            // Continuă cu următorul client YouTube; pentru non-YT rămâne o singură încercare.
         }
         return Result.failure(
-            IllegalStateException(YtdlpError.sanitizeForUser(appContext, msg))
+            IllegalStateException(YtdlpError.sanitizeForUser(appContext, lastMsg))
         )
     }
 
@@ -113,7 +93,7 @@ object YtdlpDownload {
         outputDir: File,
         presetIndex: Int,
         noPlaylist: Boolean,
-        youtubeExtractorArgs: String,
+        youtubeExtractorArgs: String?,
         onProgress: ((Float, Long, String) -> Unit)? = null
     ): Result<List<File>> {
         if (presetIndex !in YtdlpPresets.ALL.indices) {
@@ -144,7 +124,16 @@ object YtdlpDownload {
                     YoutubeDL.getInstance().execute(req)
                 }
             }.getOrElse { e ->
+                // Biblioteca aruncă pe exitCode != 0 — tratează ca eșec de format când e cazul.
+                lastErr = e.message.orEmpty()
+                if (lastErr.isNotBlank() && isFormatNotAvailable(lastErr)) {
+                    return@getOrElse null
+                }
+                // Bot/auth pe clientul curent — nu mai încerca restul formatelor.
                 return Result.failure(e)
+            }
+            if (response == null) {
+                continue
             }
             if (response.exitCode != 0) {
                 lastErr = responseText(response)
@@ -195,7 +184,7 @@ object YtdlpDownload {
         attemptIndex: Int,
         noPlaylist: Boolean,
         isVideoPreset: Boolean,
-        youtubeExtractorArgs: String,
+        youtubeExtractorArgs: String?,
         forceMp3ForYoutubeNativeAudio: Boolean
     ): YoutubeDLRequest {
         return when (format) {
@@ -216,7 +205,7 @@ object YtdlpDownload {
         attemptIndex: Int,
         noPlaylist: Boolean,
         isVideoPreset: Boolean,
-        youtubeExtractorArgs: String,
+        youtubeExtractorArgs: String?,
         forceMp3ForYoutubeNativeAudio: Boolean
     ): YoutubeDLRequest {
         return YoutubeDLRequest(url).apply {
@@ -224,7 +213,7 @@ object YtdlpDownload {
             addOption("-f", format)
             addOption("-o", "${outputDir.absolutePath}/%(title)s.%(ext)s")
             if (noPlaylist) addOption("--no-playlist")
-            if (YoutubeUrl.isYouTubePage(url)) {
+            if (YoutubeUrl.isYouTubePage(url) && !youtubeExtractorArgs.isNullOrBlank()) {
                 addOption("--extractor-args", youtubeExtractorArgs)
             }
             if (attemptIndex == 0) {
@@ -280,7 +269,7 @@ object YtdlpDownload {
         outputDir: File,
         preset: FormatPreset,
         noPlaylist: Boolean,
-        youtubeExtractorArgs: String,
+        youtubeExtractorArgs: String?,
         forceMp3ForYoutubeNativeAudio: Boolean
     ): YoutubeDLRequest {
         return YoutubeDLRequest(url).apply {
@@ -288,7 +277,7 @@ object YtdlpDownload {
             addOption("-f", "besteffort")
             addOption("-o", "${outputDir.absolutePath}/%(title)s.%(ext)s")
             if (noPlaylist) addOption("--no-playlist")
-            if (YoutubeUrl.isYouTubePage(url)) {
+            if (YoutubeUrl.isYouTubePage(url) && !youtubeExtractorArgs.isNullOrBlank()) {
                 addOption("--extractor-args", youtubeExtractorArgs)
             }
             if (preset.audioExtract && preset.audioCodec != null) {
@@ -311,7 +300,7 @@ object YtdlpDownload {
         outputDir: File,
         preset: FormatPreset,
         noPlaylist: Boolean,
-        youtubeExtractorArgs: String,
+        youtubeExtractorArgs: String?,
         forceMp3ForYoutubeNativeAudio: Boolean
     ): YoutubeDLRequest {
         return YoutubeDLRequest(url).apply {
@@ -319,7 +308,7 @@ object YtdlpDownload {
             addOption("-f", "worst")
             addOption("-o", "${outputDir.absolutePath}/%(title)s.%(ext)s")
             if (noPlaylist) addOption("--no-playlist")
-            if (YoutubeUrl.isYouTubePage(url)) {
+            if (YoutubeUrl.isYouTubePage(url) && !youtubeExtractorArgs.isNullOrBlank()) {
                 addOption("--extractor-args", youtubeExtractorArgs)
             }
             if (preset.audioExtract && preset.audioCodec != null) {

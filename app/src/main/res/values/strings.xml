@@ -198,6 +198,7 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
 
     <string name="ytdlp_err_unknown">Eroare necunoscută.</string>
     <string name="ytdlp_hint_network">— Rețea/DNS: verifică Wi‑Fi sau date mobile, încearcă fără VPN sau alt DNS.</string>
+    <string name="ytdlp_hint_bot">— YouTube cere verificare (bot). Actualizează yt-dlp din meniu (nightly), încearcă altă rețea / fără VPN, sau reîncearcă mai târziu.</string>
     <string name="err_preset_invalid">Format invalid</string>
     <string name="err_download_exit_code">cod %1$d</string>
     <string name="err_no_new_output_file">Nu s-a creat niciun fișier nou.</string>

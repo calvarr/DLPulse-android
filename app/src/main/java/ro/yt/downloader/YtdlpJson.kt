@@ -26,12 +26,12 @@ data class SearchResultItem(
 
 object YtdlpJson {
 
-    private fun YoutubeDLRequest.addProbeOptions(url: String) {
+    private fun YoutubeDLRequest.addProbeOptions(url: String, extractorArgs: String?) {
         addOption("--no-warnings")
         addOption("-J")
         addOption("--skip-download")
-        if (YoutubeUrl.isYouTubePage(url)) {
-            addOption("--extractor-args", "youtube:player_client=android,web")
+        if (YoutubeUrl.isYouTubePage(url) && !extractorArgs.isNullOrBlank()) {
+            addOption("--extractor-args", extractorArgs)
         }
         addOption("--sleep-interval", "2")
     }
@@ -41,30 +41,46 @@ object YtdlpJson {
      */
     fun describeUrl(context: Context, url: String): UrlDescribeResult {
         val targetUrl = YoutubeUrl.normalize(url)
-        val response = runCatching {
-            val req = YoutubeDLRequest(targetUrl).apply {
-                addProbeOptions(targetUrl)
-            }
-            YoutubeDL.getInstance().execute(req)
-        }.getOrElse { e ->
-            return UrlDescribeResult(false, error = e.message ?: e.toString())
+        val attempts = if (YoutubeUrl.isYouTubePage(targetUrl)) {
+            YtdlpYoutubeClients.extractorArgAttempts()
+        } else {
+            listOf(null)
         }
-        if (response.exitCode != 0) {
-            val err = response.err.takeIf { it.isNotBlank() } ?: response.out
-            return UrlDescribeResult(
-                false,
-                error = err.ifBlank {
+        var lastError: String? = null
+        for (extractorArgs in attempts) {
+            val outcome = runCatching {
+                val req = YoutubeDLRequest(targetUrl).apply {
+                    addProbeOptions(targetUrl, extractorArgs)
+                }
+                YoutubeDL.getInstance().execute(req)
+            }
+            val response = outcome.getOrNull()
+            if (response == null) {
+                lastError = outcome.exceptionOrNull()?.message
+                    ?: outcome.exceptionOrNull()?.toString()
+                continue
+            }
+            if (response.exitCode != 0) {
+                lastError = (response.err.takeIf { it.isNotBlank() } ?: response.out).ifBlank {
                     context.getString(R.string.ytdlp_err_read_url, response.exitCode)
                 }
-            )
+                continue
+            }
+            val json = runCatching { JSONObject(response.out.trim()) }.getOrElse {
+                return UrlDescribeResult(
+                    false,
+                    error = context.getString(R.string.ytdlp_err_unexpected_response)
+                )
+            }
+            return parseInfoJson(context, json)
         }
-        val json = runCatching { JSONObject(response.out.trim()) }.getOrElse {
-            return UrlDescribeResult(
-                false,
-                error = context.getString(R.string.ytdlp_err_unexpected_response)
+        return UrlDescribeResult(
+            false,
+            error = YtdlpError.sanitizeForUser(
+                context,
+                lastError ?: context.getString(R.string.ytdlp_err_unexpected_response)
             )
-        }
-        return parseInfoJson(context, json)
+        )
     }
 
     private fun parseInfoJson(context: Context, info: JSONObject): UrlDescribeResult {
@@ -111,7 +127,7 @@ object YtdlpJson {
                 addOption("-J")
                 addOption("--skip-download")
                 addOption("--flat-playlist")
-                addOption("--extractor-args", "youtube:player_client=android,web")
+                // Flat search: fără player_client forțat (default yt-dlp).
             }
             YoutubeDL.getInstance().execute(req)
         }.getOrElse { e -> return Result.failure(e) }
@@ -180,9 +196,7 @@ object YtdlpJson {
                 addOption("-J")
                 addOption("--skip-download")
                 addOption("--flat-playlist")
-                if (YoutubeUrl.isYouTubePage(targetUrl)) {
-                    addOption("--extractor-args", "youtube:player_client=android,web")
-                }
+                // Flat playlist: default yt-dlp (fără android/web forțat).
                 addOption("--sleep-interval", "2")
             }
             YoutubeDL.getInstance().execute(req)

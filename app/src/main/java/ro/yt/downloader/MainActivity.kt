@@ -574,7 +574,7 @@ class MainActivity : AppCompatActivity() {
             val updateResult = runCatching {
                 YoutubeDL.getInstance().updateYoutubeDL(
                     applicationContext,
-                    YoutubeDL.UpdateChannel._STABLE
+                    YoutubeDL.UpdateChannel._NIGHTLY
                 )
             }
             if (updateResult.isSuccess) {
@@ -641,7 +641,7 @@ class MainActivity : AppCompatActivity() {
             val updateResult = runCatching {
                 YoutubeDL.getInstance().updateYoutubeDL(
                     applicationContext,
-                    YoutubeDL.UpdateChannel._STABLE
+                    YoutubeDL.UpdateChannel._NIGHTLY
                 )
             }
             runOnUiThread {
