@@ -30,6 +30,7 @@ object UserFolderExporter {
             name.endsWith(".mp3", true) -> "audio/mpeg"
             name.endsWith(".m4a", true) -> "audio/mp4"
             name.endsWith(".opus", true) -> "audio/opus"
+            name.endsWith(".json", true) -> "application/json"
             else -> "application/octet-stream"
         }
     }

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_panel_steampunk"
+    android:elevation="8dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="2dp"
+    android:paddingTop="0dp"
+    android:paddingEnd="2dp"
+    android:paddingBottom="0dp">
+
+    <ImageButton
+        android:id="@+id/popupPlay"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/cd_menu_play_file"
+        android:padding="6dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_action_play" />
+
+    <ImageButton
+        android:id="@+id/popupShare"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/cd_menu_share_file"
+        android:padding="6dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_action_share" />
+
+    <ImageButton
+        android:id="@+id/popupCast"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/cd_menu_cast_file"
+        android:padding="6dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_action_cast" />
+
+    <ImageButton
+        android:id="@+id/popupRename"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/cd_menu_rename_file"
+        android:padding="6dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_action_rename" />
+
+    <ImageButton
+        android:id="@+id/popupMove"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/cd_menu_move_file"
+        android:padding="6dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_action_move" />
+
+    <ImageButton
+        android:id="@+id/popupDelete"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/cd_menu_delete_file"
+        android:padding="6dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_action_delete" />
+</LinearLayout>

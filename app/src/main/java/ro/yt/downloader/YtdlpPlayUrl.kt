@@ -9,32 +9,40 @@ import com.yausername.youtubedl_android.YoutubeDLRequest
  */
 object YtdlpPlayUrl {
 
-    private const val YT_EXTRACTOR_PRIMARY = "youtube:player_client=android,web"
-    private const val YT_EXTRACTOR_FALLBACK = "youtube:player_client=tv_embedded"
+    private val YT_FORMAT_ATTEMPTS = listOf(
+        "best[ext=mp4]/best[ext=webm]/best" to false,
+        "18/best[height<=480]/worst" to true
+    )
 
     fun extractStreamUrlForPlayback(context: Context, pageUrl: String): Result<String> {
         val raw = pageUrl.trim()
         val url = if (YoutubeUrl.isYouTubePage(raw)) YoutubeUrl.normalize(raw) else raw
-        val attempts: List<Triple<String?, String, Boolean>> =
+        val extractorAttempts: List<String?> =
             if (YoutubeUrl.isYouTubePage(url)) {
-                listOf(
-                    Triple(YT_EXTRACTOR_PRIMARY, "best[ext=mp4]/best[ext=webm]/best", false),
-                    Triple(YT_EXTRACTOR_PRIMARY, "18/best[height<=480]/worst", false),
-                    Triple(YT_EXTRACTOR_FALLBACK, "best[ext=mp4]/best[ext=webm]/best", false),
-                    Triple(YT_EXTRACTOR_FALLBACK, "18/best[height<=480]/worst", true)
-                )
+                YtdlpYoutubeClients.extractorArgAttempts()
+            } else {
+                listOf(null)
+            }
+        val formatAttempts =
+            if (YoutubeUrl.isYouTubePage(url)) {
+                YT_FORMAT_ATTEMPTS
             } else {
                 listOf(
-                    Triple(null, "bestaudio/best", false),
-                    Triple(null, "bestaudio*", true),
-                    Triple(null, "best/bestaudio", true)
+                    "bestaudio/best" to false,
+                    "bestaudio*" to true,
+                    "best/bestaudio" to true
                 )
             }
         var lastError: Throwable? = null
-        for ((extractor, format, allowFirstOfMany) in attempts) {
-            val r = runExtractWithFormat(context, url, extractor, format, allowFirstOfMany)
-            if (r.isSuccess) return r
-            lastError = r.exceptionOrNull()
+        for (extractor in extractorAttempts) {
+            for ((format, allowFirstOfMany) in formatAttempts) {
+                val r = runExtractWithFormat(context, url, extractor, format, allowFirstOfMany)
+                if (r.isSuccess) return r
+                lastError = r.exceptionOrNull()
+                val msg = lastError?.message.orEmpty()
+                // Bot-check pe clientul curent — treci la următorul client, nu la alt format.
+                if (YtdlpYoutubeClients.looksLikeBotOrAuthBlock(msg)) break
+            }
         }
         return Result.failure(
             lastError ?: IllegalStateException(context.getString(R.string.search_play_no_url))

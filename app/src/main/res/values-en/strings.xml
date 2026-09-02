@@ -7,10 +7,15 @@
     <string name="app_version_update_pending">Version %1$s · available: %2$s</string>
     <string name="app_version_newer_than_release">Version %1$s (newer than latest release %2$s)</string>
     <string name="update_available_title">Update available</string>
-    <string name="update_available_message">Version %1$s is on GitHub (you have %2$s).\n\nRelease: %3$s</string>
-    <string name="update_open_release">Open release page</string>
-    <string name="update_download_apk">Download APK</string>
+    <string name="update_available_message">Version %1$s is on GitHub (you have %2$s).\n\nRelease: %3$s\n\nTap Update to download the APK and start installation. If Android asks to uninstall the old version, that is only once (stable signing from 1.0.16).</string>
+    <string name="update_open_release">Release page</string>
+    <string name="update_download_apk">Update</string>
     <string name="update_later">Later</string>
+    <string name="update_downloading_title">Downloading update</string>
+    <string name="update_downloading_message">Downloading DLPulse %1$s…</string>
+    <string name="update_download_failed">Download failed: %1$s</string>
+    <string name="update_install_prompt">Confirm installation on the next screen.</string>
+    <string name="update_need_unknown_sources">Allow installs from this app (unknown sources), then try Update again.</string>
     <string name="cast_stream_channel_name">Chromecast casting</string>
     <string name="cast_stream_notification_title">Casting active</string>
     <string name="cast_stream_notification_text">Local stream for Chromecast</string>
@@ -35,7 +40,7 @@
     <string name="cd_language_menu">Language</string>
     <string name="cd_menu_play_file">Play file</string>
     <string name="cd_menu_share_file">Share file</string>
-    <string name="cd_menu_cast_file">Cast to Chromecast</string>
+    <string name="cd_menu_cast_file">Cast (Chromecast / DLNA)</string>
 
     <string name="player_cast_no_http">Cannot start HTTP server: no usable Wi‑Fi IP. Disable VPN so Chromecast can reach your phone.</string>
     <string name="player_cast_no_session">Cast session unavailable.</string>
@@ -104,6 +109,10 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="main_dialog_save_title">Where should we save files?</string>
     <string name="main_save_public">Public downloads (DLPulse folder)</string>
     <string name="main_save_other">Other folder (SD card, Drive, etc.)</string>
+    <string name="save_picker_here">Save here</string>
+    <string name="save_picker_new_folder">New folder</string>
+    <string name="save_picker_custom">Custom path…</string>
+    <string name="save_picker_up">‥ parent folder</string>
     <string name="perm_startup_title">Required permissions</string>
     <string name="perm_startup_message">DLPulse needs media and file access to list, move, and delete downloads in Download/DLPulse. Please approve the following Android prompts.</string>
     <string name="perm_startup_continue">Continue</string>
@@ -149,17 +158,18 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="main_term_info_modules">[INFO] Other modules (bundled Python, etc.) ship with the APK.</string>
     <string name="main_term_done">$ Done. You can close this console.</string>
 
-    <string name="toast_batch_done">Done: %1$d file(s).\nSaved in app:\n%2$s\nExtra export: %3$d/%1$d.%4$s</string>
+    <string name="toast_batch_done">Done: %1$d file(s).\n%2$s\nExport: %3$d/%1$d.%4$s</string>
     <string name="toast_some_errors">\nSome failed: %1$s</string>
 
     <string name="export_private_only">Not copied outside the app (private storage only).</string>
     <string name="export_user_ok">Also copied to the folder you picked.</string>
     <string name="export_user_partial">Partially copied to the folder you picked (%1$d/%2$d); the rest only at the path above.</string>
     <string name="export_user_fail">Could not write to the folder you picked; files are at the path above.</string>
-    <string name="export_public_q">Also copied to Downloads → DLPulse.</string>
-    <string name="export_public_ok">Copied to public Downloads.</string>
-    <string name="export_public_partial">Extra export: %1$d/%2$d.</string>
-    <string name="toast_done_files">Done: %1$s\n\nLocal save (source):\n%2$s\n\n%3$s</string>
+    <string name="export_public_q">Saved to Downloads → DLPulse%1$s.</string>
+    <string name="export_public_ok">Saved to Downloads → DLPulse%1$s.</string>
+    <string name="export_public_partial">Exported %1$d/%2$d to Downloads → DLPulse%3$s.</string>
+    <string name="export_staging_cleaned"> (temporary app copies removed)</string>
+    <string name="toast_done_files">Done: %1$s\n\n%2$s</string>
 
     <string-array name="format_preset_labels">
         <item>Video – best quality (video+audio)</item>
@@ -188,6 +198,7 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
 
     <string name="ytdlp_err_unknown">Unknown error.</string>
     <string name="ytdlp_hint_network">— Network/DNS: check Wi‑Fi or mobile data, try without VPN or another DNS.</string>
+    <string name="ytdlp_hint_bot">— YouTube bot check. Update yt-dlp from the menu (nightly), try another network / without VPN, or retry later.</string>
     <string name="err_preset_invalid">Invalid format</string>
     <string name="err_download_exit_code">code %1$d</string>
     <string name="err_no_new_output_file">No new file was created.</string>
@@ -233,6 +244,11 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="browse_delete">Delete</string>
     <string name="browse_delete_done">File deleted.</string>
     <string name="browse_delete_failed">Could not delete. Media permission is read-only — approve Android’s confirmation dialog if shown.</string>
+    <string name="browse_delete_folder">Delete folder</string>
+    <string name="browse_delete_folder_confirm_title">Delete folder</string>
+    <string name="browse_delete_folder_confirm_message">Delete folder \"%1$s\" and all its contents (files, artwork, metadata)?</string>
+    <string name="browse_delete_folder_done">Folder deleted.</string>
+    <string name="browse_delete_folder_failed">Could not delete folder. Check permissions or accept the Android dialog if shown.</string>
     <string name="cd_menu_rename_file">Rename</string>
     <string name="cd_menu_move_file">Move file</string>
     <string name="cd_menu_delete_file">Delete file</string>
@@ -244,7 +260,7 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="browse_selected_n">%1$d selected</string>
     <string name="cd_browse_playlist_play">Play playlist</string>
     <string name="cd_browse_selection_share">Share selection</string>
-    <string name="cd_browse_playlist_cast">Cast playlist</string>
+    <string name="cd_browse_playlist_cast">Cast playlist (Chromecast / DLNA)</string>
     <string name="search_play_in_app">Play</string>
     <string name="search_play_preparing">Preparing playback…</string>
     <string name="search_play_failed">Could not start playback.</string>
@@ -260,6 +276,15 @@ yt-dlp --list-extractors | grep -i youtube]]></string>
     <string name="cast_toast_playback_error">Chromecast playback error (codec, container, or URL unreachable from TV). Try MP4 (H.264/AAC) and the same Wi‑Fi.</string>
     <string name="cast_needs_play_services">Casting requires Google Play Services.</string>
     <string name="cast_http_start_failed">Cannot start HTTP server: no usable Wi‑Fi IP. Disable VPN/Tailscale so Chromecast can reach your phone.</string>
+    <string name="cast_target_title">Cast to</string>
+    <string name="cast_target_chromecast">Chromecast / Google Cast</string>
+    <string name="cast_target_amazon">Amazon Fire TV (DLNA)</string>
+    <string name="cast_amazon_scanning">Searching Amazon / DLNA devices on Wi‑Fi…</string>
+    <string name="cast_amazon_pick_device">Choose Amazon device</string>
+    <string name="cast_amazon_none_found">No Fire TV / DLNA renderer found.\n\nEcho (Alexa) speakers do not accept cast from third-party apps. Use a Fire TV on the same Wi‑Fi, or Chromecast.</string>
+    <string name="cast_amazon_play_failed">Could not start playback on %1$s. Check Wi‑Fi and format (MP4/MP3).</string>
+    <string name="cast_amazon_started">Amazon cast: %1$s</string>
+    <string name="cast_amazon_finished">Amazon cast finished.</string>
     <string name="cast_pick_tv">Pick your TV / Chromecast from the list.</string>
     <string name="cast_next_file_failed">Could not open the next file for casting.</string>
     <string name="cast_head_wifi_long">Check: local URL did not respond to HEAD. The TV may not get the stream; check Wi‑Fi.</string>
